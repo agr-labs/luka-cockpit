@@ -1,5 +1,7 @@
 # Deploy — static build to Cloudflare Pages
 
+**Live: <https://luka.steadwell.cc>** (project `luka-cockpit`, account `2d571f09…`).
+
 The same source runs in two environments, and they behave differently on purpose.
 
 | | **sim** (Pages) | **local** (`node serve.mjs`) |
@@ -30,6 +32,26 @@ dispatch allowed.
 FK verification (`tools/verify-fk.mjs`) is deliberately **not** in the deploy path: it
 needs MuJoCo, and a Pages deploy should not depend on a Python simulation stack being
 installable. Run it locally after touching the model.
+
+## Current production setup (2026-10-28)
+
+| Item | Value |
+|---|---|
+| Pages project | `luka-cockpit` |
+| Production URL | `https://luka-cockpit.pages.dev` |
+| Custom domain | `luka.steadwell.cc` — status **active**, Google cert, HTTP validation |
+| DNS | proxied CNAME `luka` → `luka-cockpit.pages.dev` in zone `steadwell.cc` |
+| Deployed with | `npx wrangler pages deploy dist --project-name luka-cockpit --branch main` |
+| Verified | HTTP 200, SIM badge, twin at 60 fps, 22 MB mesh served, zero failed requests |
+
+Two things learned doing it:
+
+1. Adding the custom domain through the Pages API does **not** create the DNS record when the
+   calling token lacks DNS scope. The record was created separately with a token that has it.
+   If a future domain is added, expect the same two-step.
+2. The locally cached negative DNS answer outlived the record — `curl` and the system resolver
+   returned nothing while `1.1.1.1` and the edge served correctly. Flush before concluding
+   anything is broken.
 
 ## Required configuration
 

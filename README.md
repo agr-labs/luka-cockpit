@@ -8,6 +8,8 @@ Built by [AGR Labs](https://github.com/agr-labs) while commissioning a real A2 U
 safety posture in this repository is not decoration: every gate exists because of something
 that happened on the robot. See [decisions](docs/decisions.md).
 
+**Live demo: <https://luka.steadwell.cc>** — SIM mode, no robot required.
+
 ```sh
 git clone https://github.com/agr-labs/luka-cockpit.git
 cd luka-cockpit
