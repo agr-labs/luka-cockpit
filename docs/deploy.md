@@ -17,7 +17,7 @@ fires a probe that would 404 in a visitor's console.
 
 ## What CI does
 
-`.github/workflows/deploy-a2-cockpit.yml` — path-filtered to `a2-cockpit/**`, manual
+`.github/workflows/deploy.yml` in this repository — runs on pushes to `main`, manual
 dispatch allowed.
 
 1. `tools/fetch-model.sh` — clones the upstream model repo and restores the gitignored

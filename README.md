@@ -97,7 +97,7 @@ node tools/package-site.mjs      # → dist/ (≈39.6 MB, 29 files)
 cd dist && python3 -m http.server 8791
 ```
 
-Deployment is path-filtered CI on `a2-cockpit/**` — see [docs/deploy.md](docs/deploy.md)
+Deployment is a GitHub Action in this repo — see [docs/deploy.md](docs/deploy.md)
 for the workflow, the two required secrets, and the 25 MiB per-asset budget.
 
 ## What the twin is, and is not

@@ -1,0 +1,60 @@
+name: Deploy to Cloudflare Pages
+
+# Deploys this repository as a static site. The page has no backend on Pages,
+# so it boots in SIM mode: twin, playback, presets, joint sliders. Live
+# telemetry and the arm path need `node serve.mjs` locally.
+#
+# Required repository secrets:
+#   CLOUDFLARE_API_TOKEN   – Pages:Edit
+#   CLOUDFLARE_ACCOUNT_ID  – account id
+# Optional repository variable:
+#   CF_PAGES_PROJECT       – defaults to `luka-cockpit`
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-luka-cockpit
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check deployment secrets
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          missing=0
+          [ -z "$TOKEN" ] && { echo "::error::CLOUDFLARE_API_TOKEN is not set"; missing=1; }
+          [ -z "$ACCOUNT" ] && { echo "::error::CLOUDFLARE_ACCOUNT_ID is not set"; missing=1; }
+          exit "$missing"
+
+      # Model payloads are gitignored (~53 MB), so CI reconstructs them.
+      - name: Restore model payloads
+        run: sh tools/fetch-model.sh
+
+      - name: Build twin model from URDF + STLs
+        run: node tools/build-model.mjs
+
+      - name: Package static site
+        run: node tools/package-site.mjs
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=${{ vars.CF_PAGES_PROJECT || 'luka-cockpit' }} --branch=${{ github.ref_name }}
