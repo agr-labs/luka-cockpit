@@ -1,0 +1,11 @@
+# Large vendored model payloads. Restore with tools/fetch-model.sh, then
+# regenerate with: node tools/build-model.mjs
+model/meshes/
+model/recordings/
+model/generated/
+model/mjcf/
+node_modules/
+dist/
+
+.DS_Store
+*.log

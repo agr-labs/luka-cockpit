@@ -1,0 +1,97 @@
+{
+  "enabled": false,
+  "schemaStatus": "verified against vendor documentation 2026-10-28",
+  "note": "The interface is now known. What is still missing is an authenticated path onto the robot (SSH) to publish the topic, and a supervised first test. Do not set enabled=true until robot-bridge/arm_bridge.py has been reviewed and run with --print-only first.",
+  "transport": "ros2-topic",
+  "source": {
+    "doc": "https://open-sg.agibot.com/docs/en/aimdk/a2/v2_1/dev_guide/07-01-motion_control",
+    "section": "7.1.9 Arm Control Command and Status Topic Interfaces",
+    "readOn": "2026-10-28"
+  },
+  "command": {
+    "topic": "/motion/control/arm_joint_command",
+    "messageType": "sensor_msgs/msg/JointState",
+    "jointOrder": [
+      "idx13_left_arm_joint1",
+      "idx14_left_arm_joint2",
+      "idx15_left_arm_joint3",
+      "idx16_left_arm_joint4",
+      "idx17_left_arm_joint5",
+      "idx18_left_arm_joint6",
+      "idx19_left_arm_joint7",
+      "idx20_right_arm_joint1",
+      "idx21_right_arm_joint2",
+      "idx22_right_arm_joint3",
+      "idx23_right_arm_joint4",
+      "idx24_right_arm_joint5",
+      "idx25_right_arm_joint6",
+      "idx26_right_arm_joint7"
+    ],
+    "units": "radians",
+    "fieldRules": {
+      "position": "all 14 values required",
+      "velocity": "invalid field — always 0.0",
+      "effort": "invalid field — always 0.0"
+    }
+  },
+  "state": {
+    "topic": "/motion/control/arm_joint_state",
+    "messageType": "sensor_msgs/msg/JointState",
+    "notes": "14 joints. Joints 6 and 7 of each arm are a coupled parallel mechanism: position only, no valid velocity/effort."
+  },
+  "rate": {
+    "recommendedHz": 100,
+    "maxIntervalSec": 0.03,
+    "maxSpeedRadPerSec": 3.0,
+    "maxAccelRadPerSec2": 6.28,
+    "smoothing": "vendor recommends at least a first-order low-pass: y = (1-a)*y_prev + a*x"
+  },
+  "actionGate": {
+    "permittedActions": [
+      "PASSIVE_UPPER_BODY_JOINT_SERVO",
+      "RL_LOCOMOTION_ARM_EXT_JOINT_SERVO",
+      "RL_WHOLE_BODY_EXT_JOINT_SERVO"
+    ],
+    "currentActionAtCapture": "McAction_DEFAULT",
+    "consequence": "McAction_DEFAULT is NOT permitted. Arm commands published in DEFAULT are outside the documented contract and must be treated as unsupported.",
+    "switchInterface": {
+      "rpc": "aimdk.protocol.McActionService/SetAction",
+      "body": {
+        "header": { "timestamp": {}, "control_source": "ControlSource_SAFE" },
+        "command": { "action": "McAction_USE_EXT_CMD", "ext_action": "RL_LOCOMOTION_ARM_EXT_JOINT_SERVO" }
+      },
+      "notes": "Asynchronous. Poll GetAction until the switch completes before publishing."
+    }
+  },
+  "knownBlocker": {
+    "motionPlayer": "In JOINT_SERVO mode /motion/control/arm_joint_command is taken over by the motion_player module. The vendor requires examples/motion_player/disable_motion_player.sh to be run first. This is a robot-side change and needs explicit approval.",
+    "presetPlayback": "Disabling motion_player may stop factory preset gestures. Confirm with the operator before doing it."
+  },
+  "limits": {
+    "source": "section 7.1.9 per-joint table",
+    "docTypo": "idx26 is printed as '0.35 ~ 0.35'; treated as the mirrored +-0.35 of idx19.",
+    "hard": {
+      "idx13_left_arm_joint1": [-2.91, 2.91],
+      "idx14_left_arm_joint2": [-0.46, 1.60],
+      "idx15_left_arm_joint3": [-2.91, 2.91],
+      "idx16_left_arm_joint4": [-2.00, -0.03],
+      "idx17_left_arm_joint5": [-2.94, 2.94],
+      "idx18_left_arm_joint6": [-0.45, 0.45],
+      "idx19_left_arm_joint7": [-0.35, 0.35],
+      "idx20_right_arm_joint1": [-2.91, 2.91],
+      "idx21_right_arm_joint2": [-1.60, 0.46],
+      "idx22_right_arm_joint3": [-2.91, 2.94],
+      "idx23_right_arm_joint4": [0.03, 2.00],
+      "idx24_right_arm_joint5": [-2.94, 2.94],
+      "idx25_right_arm_joint6": [-0.45, 0.45],
+      "idx26_right_arm_joint7": [-0.35, 0.35]
+    },
+    "recommendedEnvelope": {
+      "note": "vendor 'yellow region' for the parallel wrist — narrower than the kinematic limit",
+      "idx18_left_arm_joint6": [-0.3, 0.3],
+      "idx19_left_arm_joint7": [-0.2, 0.2],
+      "idx25_right_arm_joint6": [-0.3, 0.3],
+      "idx26_right_arm_joint7": [-0.2, 0.2]
+    }
+  }
+}

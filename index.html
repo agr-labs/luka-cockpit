@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Steadwell · Luka A2 Ultra Cockpit</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body data-mode="MANUAL">
+  <div id="banner" class="banner"></div>
+
+  <div id="boot" class="boot">
+    <div class="bootbox">
+      <div class="bootmark"></div>
+      <div class="boottitle">LUKA · A2 ULTRA</div>
+      <div id="bootMsg" class="bootmsg">starting…</div>
+      <div class="bootbar"><i id="bootBar"></i></div>
+      <div id="bootHint" class="boothint">estimated twin · not calibrated to the hardware</div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark"></span>
+      <div>
+        <strong>STEADWELL</strong>
+        <small>LUKA · A2 ULTRA TWIN COCKPIT</small>
+      </div>
+    </div>
+    <div class="topmeta">
+      <span><i id="linkDot" class="dot"></i>LINK</span>
+      <span><i id="deadmanDot" class="dot"></i>DEADMAN</span>
+      <span><i id="estopDot" class="dot"></i>STOP</span>
+      <span class="sep"></span>
+      <span id="envBadge" class="chip env" data-env="sim">SIM</span>
+      <span id="rendererKind" class="chip">…</span>
+      <span id="fps" class="chip">– fps</span>
+      <span id="tris" class="chip">– tris</span>
+    </div>
+  </header>
+
+  <main class="grid">
+    <aside class="rail left">
+      <section class="card">
+        <h2>Control authority</h2>
+        <div id="modeState" class="statemachine" data-state="MANUAL">MANUAL</div>
+        <p class="hint">Local preconditions, not a manufacturer arbitration mechanism.</p>
+        <div class="btncol">
+          <button id="btnArm" class="btn">ARM</button>
+          <button id="btnEngage" class="btn">ENGAGE COMPUTER</button>
+          <button id="btnHandoff" class="btn">SAFE HANDOFF</button>
+        </div>
+        <button id="btnEstop" class="btn estop">SOFTWARE STOP</button>
+        <p class="hint stopnote">Unverified — this does not reach the manufacturer's safety system. Use the factory e-stop.</p>
+        <button id="btnClear" class="btn ghost">clear e-stop</button>
+        <button id="deadman" class="btn deadman">HOLD DEADMAN <kbd>space</kbd></button>
+        <div class="meters">
+          <div><span>commands</span><b id="cmdCount">0</b></div>
+          <div><span>rejections</span><b id="rejCount">0</b></div>
+        </div>
+        <div id="watchdog" class="watchdog">watchdog idle</div>
+        <div id="lastReject" class="reject"></div>
+      </section>
+
+      <section class="card">
+        <h2>Luka link <span id="linkMode" class="tag" data-mode="offline">OFFLINE</span></h2>
+        <div id="linkBody" class="kvlist"><div class="kv"><span>endpoint</span><b>—</b></div></div>
+        <div class="btnrow">
+          <button id="btnLink" class="btn small">connect live</button>
+          <button id="btnMock" class="btn small ghost">mock</button>
+        </div>
+        <div class="field">
+          <label for="convention">joint convention</label>
+          <select id="convention">
+            <option value="raw">as reported</option>
+            <option value="flip2">flip joint 2</option>
+            <option value="flip2_5">flip joint 2 + 5</option>
+            <option value="offset2">joint 2 ∓90°</option>
+          </select>
+        </div>
+        <div class="btnrow">
+          <button id="btnReference" class="btn small">capture reference pose</button>
+          <button id="btnClearRef" class="btn small ghost">clear</button>
+        </div>
+        <p id="referenceNote" class="hint">With his arms hanging, capture a reference. The twin then mirrors movement *relative* to that pose instead of assuming the model's zero.</p>
+        <p id="conventionNote" class="hint">Measured angles may not share the model's sign convention. If the arms cross the body, pick a different convention.</p>
+        <p id="linkNote" class="hint">Read-only <code>McActionService/GetAction</code> at 0.2 Hz.</p>
+      </section>
+
+      <section class="card grow">
+        <h2>Event log</h2>
+        <div id="logList" class="log"></div>
+      </section>
+    </aside>
+
+    <section class="viewport">
+      <canvas id="view"></canvas>
+      <div class="overlay tl">
+        <div class="tagline">LUKA TWIN</div>
+        <div class="tiny">estimated model · 47 meshes · FK checked against MuJoCo, not calibrated to Luka</div>
+        <div id="poseSource" class="tiny posesrc">pose source: playback / operator — no live joint feedback</div>
+      </div>
+      <div class="overlay bl facts">
+        <div><span>dof</span><b id="dofRead">—</b></div>
+        <div><span>driven</span><b id="actRead">—</b></div>
+        <div><span>mass</span><b id="massRead">—</b></div>
+        <div><span>height</span><b id="heightRead">—</b></div>
+        <div><span>mesh</span><b id="triRead">—</b></div>
+      </div>
+      <div class="overlay br keys">
+        <span>drag / wheel: orbit</span>
+        <span><kbd>space</kbd> deadman</span>
+        <span><kbd>esc</kbd> e-stop</span>
+      </div>
+    </section>
+
+    <aside class="rail right">
+      <section class="card">
+        <h2>Luka playback <span class="muted tiny">recorded</span></h2>
+        <div class="field">
+          <label for="recSelect">recording</label>
+          <select id="recSelect"></select>
+        </div>
+        <div class="btnrow">
+          <button id="btnPlay" class="btn small">play</button>
+          <select id="speedSelect" class="inline">
+            <option value="0.25">0.25×</option>
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+          </select>
+        </div>
+        <input id="scrub" type="range" min="0" max="1" step="0.0001" value="0" class="scrub">
+        <div id="timeRead" class="mono tiny">—</div>
+        <div id="recMeta" class="tiny muted">—</div>
+        <p class="hint">Joint positions only, from the paired iPad app. Units and frames not independently verified.</p>
+      </section>
+
+      <section class="card">
+        <h2>Test profile <span id="profileState" class="tag" data-mode="offline">UNATTESTED</span></h2>
+        <label class="check"><input type="checkbox" id="attestRig">
+          suspension load-rated · workspace clear · factory e-stop in hand</label>
+        <div class="field">
+          <label for="feetState">feet</label>
+          <select id="feetState">
+            <option value="unknown">unknown</option>
+            <option value="clear">clear of floor</option>
+            <option value="touching">touching floor</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="excursion">excursion cap</label>
+          <select id="excursion">
+            <option value="5">±5°</option>
+            <option value="10" selected>±10°</option>
+            <option value="20">±20°</option>
+          </select>
+        </div>
+        <div class="field"><label>locomotion</label><b id="locoState" class="mono tiny">locked</b></div>
+        <div id="profileNote" class="hint">Arm commands stay refused until this is attested. Locomotion commands do not exist in this build.</div>
+      </section>
+
+      <section class="card">
+        <h2>Arm control <span id="armMode" class="tag" data-mode="offline">DRY RUN</span></h2>
+        <div class="btnrow">
+          <button class="btn small active" data-side="left">left</button>
+          <button class="btn small" data-side="right">right</button>
+          <button id="armZero" class="btn small ghost">zero</button>
+        </div>
+        <div id="armGate" class="armgate">transport not configured</div>
+        <div id="armList" class="armlist"></div>
+        <div id="armPayload" class="tiny mono payload">no command sent</div>
+        <p class="hint">Values are <b>commanded</b>, not measured. Luka exposes no joint feedback on this interface, so there is nothing to compare against yet.</p>
+      </section>
+
+      <section class="card">
+        <h2>Pose presets</h2>
+        <div class="presets">
+          <button class="btn small" data-preset="stand">stand</button>
+          <button class="btn small" data-preset="guard">guard</button>
+          <button class="btn small" data-preset="reach">reach</button>
+          <button class="btn small" data-preset="inspect">inspect</button>
+        </div>
+      </section>
+
+      <section class="card grow">
+        <h2>Joints <span class="muted tiny">deg</span></h2>
+        <div id="joints" class="joints"></div>
+      </section>
+
+      <section class="card">
+        <h2>Provenance</h2>
+        <p id="provenance" class="hint"></p>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

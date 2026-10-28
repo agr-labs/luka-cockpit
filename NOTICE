@@ -1,0 +1,28 @@
+Third-party material
+
+1. AgiBot A2 robot model (URDF, MJCF, meshes, measurements)
+   Files: model/urdf/, model/mjcf/, model/meshes/, model/BUILD_REPORT.md,
+          model/measurements.csv
+   Origin: AgiBot public model, redistributed via
+           https://github.com/Link-U-OS/rl_training (commit 8bf8fd8) and
+           https://github.com/MDeanH/luka-a2-ultra-model
+   Licence: Mulan PSL v2 — full text in model/LICENSE-MulanPSL2
+   Status: an ESTIMATED model (A2 T2D0). Not measured on the target robot.
+
+2. Joint recordings
+   Files: model/recordings/*.a2rec (not committed; fetched by tools/fetch-model.sh)
+   Origin: playback files exported from the Luka iPad app, published with the
+           model repository above.
+   Content: joint positions only. No camera, depth, LiDAR or map data.
+
+3. AgiBot AimDK SDK
+   NOT redistributed here. Interface facts in docs/ are derived from a public
+   SDK archive obtained from a third-party mirror and read offline; no SDK
+   binary, library or credential is included in this repository.
+
+4. No credentials
+   This repository contains no passwords, keys, tokens or robot credentials.
+
+The MIT licence applies to the original source code in src/, tools/, robot-bridge/,
+serve.mjs, index.html, styles.css, docs/ and the deployment workflow. Where it
+conflicts with the licences above for third-party files, those licences govern.
