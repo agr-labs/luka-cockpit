@@ -86,8 +86,14 @@ requires a process on the robot.
 `PACKAGE_SIT`, which the public v2.1 table does not. Where the website and the robot disagree,
 the robot wins.
 
-Neck and hands are not yet wired into the cockpit's stream. Adding them would complete the
-visual twin (26 body + 2 head + 12 finger channels) without any new risk — they are reads.
+**All three are now wired** into the cockpit stream: 26 body joints, 2 neck joints, and 12
+finger channels (6 per hand), all read-only.
+
+Finger rendering needs a caveat the other two do not: the vendor URDF has **no finger
+geometry and no finger joints** — each hand is a single STL. The cockpit therefore appends
+ten **synthetic** finger boxes, positioned from the hand link's bounding box and curled from
+the telemetry. They are an approximation and are labelled as such in code; they never feed
+anything back to the robot.
 
 ## 1.6 Why `SetAction` was accepted and ignored
 

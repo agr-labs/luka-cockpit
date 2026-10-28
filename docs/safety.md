@@ -62,6 +62,9 @@ nothing more:
   pose. A frozen pose that still says LIVE would be worse than no pose at all.
 - Seeing the arms move in the twin is not evidence that anything we did caused it. Right now
   the controller is the only thing moving him.
+- The finger boxes are **synthetic geometry** standing in for a hand the model does not
+  contain. Their curl is a plausible reading of a 0–2000 sensor channel, not a calibration,
+  and finger telemetry is display-only.
 
 ## Joint limits are three layers deep
 

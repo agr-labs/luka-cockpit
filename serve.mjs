@@ -21,6 +21,8 @@ const ROBOT_PORT = Number(process.env.A2_PORT || 56322);
 const READ_ONLY_RPCS = new Set([
   'aimdk.protocol.McActionService/GetAction',
   'aimdk.protocol.McDataService/GetJointState',
+  'aimdk.protocol.McDataService/GetNeckState',
+  'aimdk.protocol.McDataService/GetHandState',
 ]);
 
 // Joint telemetry is streamed for the live twin, so it gets its own budget.
@@ -33,6 +35,8 @@ const JOINT_CACHE_MS = 2000;
 let jointAt = 0;
 let jointPayload = null;
 let jointInFlight = false;
+const extraAt = {};
+const extraPayload = {};
 
 const MIN_INTERVAL_MS = 1000 / 0.25; // vendor guidance: continuous RPC polling <= 0.2 Hz
 const CACHE_TTL_MS = 15000;          // serve a cached answer for at most this long
@@ -90,6 +94,43 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, robot: `${ROBOT_HOST}:${ROBOT_PORT}`, lastProbe, lastResult }));
     return;
+  }
+
+  // Neck and hands ride the same cache/budget as the joint stream: one upstream
+  // call each per cycle, coalesced like everything else.
+  for (const [route, method] of [
+    ['/api/robot/getNeckState', 'aimdk.protocol.McDataService/GetNeckState'],
+    ['/api/robot/getHandState', 'aimdk.protocol.McDataService/GetHandState'],
+  ]) {
+    if (url.pathname === route && req.method === 'POST') {
+      const now = Date.now();
+      const key = method.split('/').pop();
+      extraAt[key] = extraAt[key] || 0;
+      extraPayload[key] = extraPayload[key] || null;
+      if (now - extraAt[key] < JOINT_MIN_MS) {
+        if (extraPayload[key]) {
+          res.writeHead(200, { 'Content-Type': 'application/json', 'X-A2-Cache': 'hit' });
+          res.end(JSON.stringify(extraPayload[key]));
+          return;
+        }
+      }
+      extraAt[key] = now;
+      try {
+        const { status, json } = await robotRpc(method, {});
+        if (status === 200) extraPayload[key] = json;
+        res.writeHead(status === 200 ? 200 : 502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(json));
+      } catch (err) {
+        if (extraPayload[key]) {
+          res.writeHead(200, { 'Content-Type': 'application/json', 'X-A2-Cache': 'stale' });
+          res.end(JSON.stringify(extraPayload[key]));
+        } else {
+          res.writeHead(504, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ __proxyError: true, message: String(err.message || err) }));
+        }
+      }
+      return;
+    }
   }
 
   if (url.pathname === '/api/robot/getJointState' && req.method === 'POST') {

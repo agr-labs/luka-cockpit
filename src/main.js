@@ -5,8 +5,9 @@ import { RobotLink } from './link.js';
 import { SafetyController, STATE } from './safety.js';
 import { Playback, RECORDINGS, loadRecording } from './a2rec.js';
 import { detectEnvironment, describeEnvironment, MODES } from './env.js';
+import { buildFingers, curlFromHandValue, handValueForKey } from './fingers.js';
 import { ArmController, ARM_JOINTS, RATE_LIMITS, makeTransport } from './armcontrol.js';
-import { clamp, damp, DEG } from './mathx.js';
+import { clamp, damp, DEG, m4 } from './mathx.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -26,12 +27,15 @@ const state = {
   poseSource: 'operator',
   convention: localStorage.getItem('luka.convention') || 'raw',
   reference: JSON.parse(localStorage.getItem('luka.reference') || '{}'),
+  referenceHands: JSON.parse(localStorage.getItem('luka.referenceHands') || '{}'),
   referenceAt: Number(localStorage.getItem('luka.referenceAt') || 0),
   poseMismatch: false,
   arm: null,
   armTransport: null,
   armSide: 'left',
   armPumping: false,
+  fingers: [],
+  fingerBase: 0,
   armLastRefusal: null,
   lastFrameTs: 0,
   azim: 0.62,
@@ -143,15 +147,29 @@ async function boot() {
       bootBar(total ? 20 + (got / total) * 72 : 70);
     }),
   ]);
-  renderer.setRobotMesh(new Float32Array(meshBuf), meshJson.ranges);
+  // The vendor model has no finger geometry, so synthetic boxes are appended to the
+  // mesh buffer. They are driven by hand telemetry and never sent anywhere.
+  const fingers = buildFingers();
+  const statics = new Float32Array(meshBuf);
+  const combined = new Float32Array(statics.length + fingers.verts.length);
+  combined.set(statics, 0);
+  combined.set(fingers.verts, statics.length);
+  state.fingers = fingers.defs;
+  state.fingerBase = meshJson.ranges.length;
+  // model.flat only covers the URDF drawables; fingers live beyond it.
+  state.flatAll = new Float32Array((state.fingerBase + fingers.defs.length) * 16);
+  renderer.setRobotMesh(combined, [...meshJson.ranges, ...fingers.ranges]);
   renderer.setGridMesh(buildGrid(12, 0.25));
   bootBar(95);
 
   const byIndex = new Map(model.drawables.map((l) => [l.drawableIndex, l]));
-  state.colors = new Float32Array(model.drawables.length * 4);
+  const total = model.drawables.length + state.fingers.length;
+  state.colors = new Float32Array(total * 4);
   for (let i = 0; i < model.drawables.length; i++) {
-    const l = byIndex.get(i);
-    state.colors.set(CHAIN[chainOf(l.name)], i * 4);
+    state.colors.set(CHAIN[chainOf(byIndex.get(i).name)], i * 4);
+  }
+  for (let i = 0; i < state.fingers.length; i++) {
+    state.colors.set(CHAIN.hand, (model.drawables.length + i) * 4);
   }
 
   for (const j of model.movable) { state.pose[j.name] = 0; state.target[j.name] = 0; }
@@ -237,6 +255,15 @@ function frame(now) {
     // Priority: measured joint telemetry > recording playback > operator input.
     const live = link.jointsFresh && link.mode === 'live' ? link.joints : null;
     if (live) {
+      const neck = link.neckFresh && link.mode === 'live' ? link.neck : null;
+      if (neck) {
+        for (const name in neck) {
+          if (!(name in state.target)) continue;
+          const ref = state.reference[name];
+          const rel = typeof ref === 'number' ? neck[name] - ref : neck[name];
+          state.target[name] = clamp(rel, -2.2, 0.5);
+        }
+      }
       for (const name in live) {
         if (!(name in state.target)) continue;
         const ref = state.reference[name];
@@ -308,8 +335,30 @@ function frame(now) {
     } else {
       state.poseMismatch = false;
     }
+    state.flatAll.set(model.flat, 0);
+
+    // Synthetic fingers: hand matrix × knuckle offset × curl about local X.
+    if (state.fingers.length && state.colors) {
+      const hands = link.handsFresh && link.mode === 'live' ? link.hands : null;
+      for (let i = 0; i < state.fingers.length; i++) {
+        const f = state.fingers[i];
+        const handMat = model.matrices.get(`${f.side}_hand`);
+        if (!handMat) continue;
+        const raw = hands ? handValueForKey(hands[f.side], f.key) : null;
+        const refHand = state.referenceHands[f.side];
+        const ref = refHand ? handValueForKey(refHand, f.key) : null;
+        const curl = raw === null ? 0 : curlFromHandValue(raw, ref);
+        const local = m4.multiply(
+          m4.multiply(m4.translation(f.offset[0], f.offset[1], f.offset[2]), m4.rotZ(f.splay)),
+          m4.rotX(curl),
+        );
+        const world = m4.multiply(handMat, local);
+        state.flatAll.set(world, (state.fingerBase + i) * 16);
+      }
+    }
+
     renderer.updateCameraFromOrbit(state.azim, state.elev, state.dist, [0, 0.95, 0]);
-    renderer.draw(model.flat, state.colors);
+    renderer.draw(state.flatAll, state.colors);
   }
 
   const src = $('poseSource');
@@ -462,7 +511,9 @@ function wireUI() {
       safety.note('capture reference failed: no measured joints yet — connect live first', 'error');
       return;
     }
-    state.reference = { ...live };
+    state.reference = { ...live, ...(link.neck || {}) };
+    state.referenceHands = JSON.parse(JSON.stringify(link.hands || {}));
+    localStorage.setItem('luka.referenceHands', JSON.stringify(state.referenceHands));
     state.referenceAt = Date.now();
     localStorage.setItem('luka.reference', JSON.stringify(state.reference));
     localStorage.setItem('luka.referenceAt', String(state.referenceAt));
@@ -481,6 +532,8 @@ function wireUI() {
   $('btnClearRef').addEventListener('click', () => {
     state.reference = {};
     state.referenceAt = 0;
+    state.referenceHands = {};
+    localStorage.removeItem('luka.referenceHands');
     localStorage.removeItem('luka.reference');
     localStorage.removeItem('luka.referenceAt');
     safety.note('reference cleared — twin falls back to the model zero', 'warn');

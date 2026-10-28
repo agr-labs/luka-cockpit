@@ -29,12 +29,13 @@ the local proxy talking to an A2 on the same network.
 | Digital twin render | **works** | WebGPU + WebGL2 verified, 306k tris, 30–60 fps |
 | Twin kinematics | **verified** | matches MuJoCo to 3.0e-7 m across 49 bodies |
 | Luka telemetry (read) | **works** | `GetAction` at 0.2 Hz + `GetJointState` at 5 Hz |
-| Live twin mirroring | **works** | 26 measured joints drive the twin in real time |
+| Live twin mirroring | **works** | 26 body + 2 neck joints + 12 finger channels, real time |
 | Recording playback | **works** | 3 real Luka joint recordings, 26 joints each |
 | Arm command schema | **known** | vendor guide §7.1.9, see [interface notes](docs/interface-notes.md) |
 | Arm command transport | **blocked** | needs a process on the robot (ROS 2 / SSH) |
 | Arm joint feedback | **solved** | `McDataService/GetJointState`, 26 joints @ 5 Hz |
-| Head / hands telemetry | **available** | `GetNeckState`, `GetHandState` — not yet wired |
+| Head / hands telemetry | **works** | `GetNeckState` (2 joints), `GetHandState` (12 channels) |
+| Finger rendering | **approximate** | synthetic boxes — the vendor model has no finger geometry |
 | Motion action gate | **closed** | Luka is in `McAction_DEFAULT`, which forbids arm commands |
 | Physical motion | **disabled** | `config/arm-schema.json` → `enabled: false` |
 | Static deploy | **works** | Cloudflare Pages, SIM mode, no gateway needed |

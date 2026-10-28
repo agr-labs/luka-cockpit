@@ -24,6 +24,10 @@ export class RobotLink extends EventTarget {
     this.jointTimer = null;
     this.jointPolling = false;
     this.joints = {};        // name -> radians
+    this.neck = {};          // idx27/idx28 -> radians
+    this.hands = {};         // side -> { fingerKey: 0..2000 }
+    this.neckAt = 0;
+    this.handsAt = 0;
     this.jointAt = 0;
     this.jointCount = 0;
     this.jointErrors = 0;
@@ -31,6 +35,8 @@ export class RobotLink extends EventTarget {
 
   get fresh() { return performance.now() - this.lastOkAt < STALE_MS; }
   get jointsFresh() { return this.jointAt > 0 && performance.now() - this.jointAt < JOINT_STALE_MS; }
+  get neckFresh() { return this.neckAt > 0 && performance.now() - this.neckAt < JOINT_STALE_MS; }
+  get handsFresh() { return this.handsAt > 0 && performance.now() - this.handsAt < JOINT_STALE_MS; }
   get ageMs() { return this.lastOkAt ? performance.now() - this.lastOkAt : Infinity; }
 
   startLive() {
@@ -82,6 +88,10 @@ export class RobotLink extends EventTarget {
     this.jointTimer = null;
     this.joints = {};
     this.jointAt = 0;
+    this.neck = {};
+    this.neckAt = 0;
+    this.hands = {};
+    this.handsAt = 0;
   }
 
   async pollJoints() {
@@ -103,6 +113,9 @@ export class RobotLink extends EventTarget {
       }
       this.joints = next;
       this.jointAt = performance.now();
+      // Neck and hands on the same cadence; failures are non-fatal.
+      this.pollNeck();
+      this.pollHands();
       this.jointCount = states.length;
       this.jointErrors = 0;
       this.dispatchEvent(new CustomEvent('joints', { detail: { joints: next, count: states.length } }));
@@ -112,6 +125,42 @@ export class RobotLink extends EventTarget {
     } finally {
       this.jointPolling = false;
     }
+  }
+
+  async pollNeck() {
+    try {
+      const res = await fetch(`${this.base}/api/robot/getNeckState`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+        signal: AbortSignal.timeout(3000),
+      });
+      const json = await res.json();
+      const d = json?.data;
+      if (!d) return;
+      const next = {};
+      for (const axis of ['shake', 'nod']) {
+        const j = d[axis];
+        if (j && typeof j.position === 'number') next[j.name] = j.position;
+      }
+      if (Object.keys(next).length) { this.neck = next; this.neckAt = performance.now(); }
+    } catch { /* neck is optional telemetry */ }
+  }
+
+  async pollHands() {
+    try {
+      const res = await fetch(`${this.base}/api/robot/getHandState`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+        signal: AbortSignal.timeout(3000),
+      });
+      const json = await res.json();
+      const d = json?.data;
+      if (!d) return;
+      const next = {};
+      for (const side of ['left', 'right']) {
+        const pos = d[side]?.agi_hand?.finger?.pos;
+        if (pos) next[side] = pos;
+      }
+      if (Object.keys(next).length) { this.hands = next; this.handsAt = performance.now(); }
+    } catch { /* hands are optional telemetry */ }
   }
 
   stop() {
@@ -164,6 +213,8 @@ export class RobotLink extends EventTarget {
       msg: this.last?.header?.msg ?? null,
       at: this.last?.__at || null,
       jointsFresh: this.jointsFresh,
+      neckFresh: this.neckFresh,
+      handsFresh: this.handsFresh,
       jointCount: this.jointCount,
       jointErrors: this.jointErrors,
     };
