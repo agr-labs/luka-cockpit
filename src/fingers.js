@@ -100,15 +100,15 @@ export function buildFingers() {
 /**
  * Telemetry 0–2000 → curl in radians.
  *
- * `reference` is the value captured at the reference pose: with a reference the
- * finger renders straight there and curls only as the hand closes. Without one,
- * the raw 0–2000 range is used, which is honest but arbitrary — the sensor's
- * mid-scale is not "open".
+ * The vendor defines the channel absolutely: 0 = fully open, 2000 = fully
+ * closed. There is no "straight" reference pose to subtract — a hand sitting at
+ * 1075 is half-closed and must render half-closed. `reference` is kept in the
+ * signature for callers from the old relative mapping, but it is deliberately
+ * ignored.
  */
 export function curlFromHandValue(value, reference = null, maxRad = 1.5) {
   if (typeof value !== 'number' || !isFinite(value)) return 0;
-  const base = typeof reference === 'number' ? reference : 0;
-  const t = (value - base) / 2000;
+  const t = value / 2000;
   return Math.max(0, Math.min(1, t)) * maxRad;
 }
 

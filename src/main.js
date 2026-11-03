@@ -26,6 +26,9 @@ const state = {
   profile: { attested: false, feet: 'unknown', excursionDeg: 10, at: null },
   poseSource: 'operator',
   convention: localStorage.getItem('luka.convention') || 'raw',
+  calibration: null,
+  calRows: new Map(),
+  limits: null,
   reference: JSON.parse(localStorage.getItem('luka.reference') || '{}'),
   referenceHands: JSON.parse(localStorage.getItem('luka.referenceHands') || '{}'),
   referenceAt: Number(localStorage.getItem('luka.referenceAt') || 0),
@@ -137,6 +140,8 @@ async function boot() {
   bootBar(8);
   state.model = await loadModel();
   const model = state.model;
+  state.limits = new Map(model.movable.map((j) => [j.name, [j.lower, j.upper]]));
+  state.calibration = await loadCalibration();
 
   bootBar(20);
   const [meshJson, meshBuf] = await Promise.all([
@@ -184,13 +189,15 @@ async function boot() {
   buildJointUI();
   buildArmUI();
   renderProfile();
+  renderCalibration();
+  setInterval(updateCalibrationValues, 250);
   buildPlaybackUI();
   wireUI();
   wireInput();
   resize();
   window.addEventListener('resize', resize);
   requestAnimationFrame(frame);
-  window.__cockpit = { safety, link, state, renderer, model, STATE, Playback, arm: state.arm, transport: state.armTransport, env: state.env };
+  window.__cockpit = { safety, link, state, renderer, model, STATE, Playback, arm: state.arm, transport: state.armTransport, env: state.env, captureCalibration, resetCalibration, calibration: () => state.calibration };
   showMeta();
   bootDone();
 }
@@ -256,19 +263,32 @@ function frame(now) {
     const live = link.jointsFresh && link.mode === 'live' ? link.joints : null;
     if (live) {
       const neck = link.neckFresh && link.mode === 'live' ? link.neck : null;
-      if (neck) {
-        for (const name in neck) {
+      const cal = state.calibration?.joints;
+      if (cal) {
+        // Per-joint calibration supersedes the global convention heuristic.
+        if (neck) {
+          for (const name in neck) {
+            if (name in state.target) state.target[name] = calibrated(name, neck[name]);
+          }
+        }
+        for (const name in live) {
+          if (name in state.target) state.target[name] = calibrated(name, live[name]);
+        }
+      } else {
+        if (neck) {
+          for (const name in neck) {
+            if (!(name in state.target)) continue;
+            const ref = state.reference[name];
+            const rel = typeof ref === 'number' ? neck[name] - ref : neck[name];
+            state.target[name] = clamp(rel, -2.2, 0.5);
+          }
+        }
+        for (const name in live) {
           if (!(name in state.target)) continue;
           const ref = state.reference[name];
-          const rel = typeof ref === 'number' ? neck[name] - ref : neck[name];
-          state.target[name] = clamp(rel, -2.2, 0.5);
+          const rel = typeof ref === 'number' ? live[name] - ref : live[name];
+          state.target[name] = applyConvention(name, rel);
         }
-      }
-      for (const name in live) {
-        if (!(name in state.target)) continue;
-        const ref = state.reference[name];
-        const rel = typeof ref === 'number' ? live[name] - ref : live[name];
-        state.target[name] = applyConvention(name, rel);
       }
       state.poseSource = 'live';
     } else if (state.playback?.playing) {
@@ -345,9 +365,10 @@ function frame(now) {
         const handMat = model.matrices.get(`${f.side}_hand`);
         if (!handMat) continue;
         const raw = hands ? handValueForKey(hands[f.side], f.key) : null;
-        const refHand = state.referenceHands[f.side];
-        const ref = refHand ? handValueForKey(refHand, f.key) : null;
-        const curl = raw === null ? 0 : curlFromHandValue(raw, ref);
+        // Absolute 0..2000 → curl, per the vendor's hand channel. No reference:
+        // a captured pose is not "straight", and subtracting it hid half-closed
+        // hands (the current values sit near 1075).
+        const curl = raw === null ? 0 : curlFromHandValue(raw);
         const local = m4.multiply(
           m4.multiply(m4.translation(f.offset[0], f.offset[1], f.offset[2]), m4.rotZ(f.splay)),
           m4.rotX(curl),
@@ -540,6 +561,10 @@ function wireUI() {
     renderReference();
   });
 
+  $('btnCalCapture')?.addEventListener('click', captureCalibration);
+  $('btnCalReset')?.addEventListener('click', resetCalibration);
+  $('btnCalDownload')?.addEventListener('click', downloadCalibration);
+
   $('convention').addEventListener('change', (e) => {
     state.convention = e.target.value;
     localStorage.setItem('luka.convention', state.convention);
@@ -628,6 +653,246 @@ function renderReference() {
     ? `Reference: ${n} joints captured ${new Date(state.referenceAt).toLocaleTimeString()} · mirroring is relative to that pose`
     : 'With his arms hanging, capture a reference. The twin then mirrors movement relative to that pose instead of assuming the model\'s zero.';
   el.classList.toggle('simnote', n > 0);
+}
+
+/* ----------------------------- joint calibration -----------------------------
+ * The public URDF is a 12-DoF leg model; arm and neck joints were added from
+ * vendor limits and frames, and the robot's zero is not the model's zero.
+ * Calibration is therefore per joint:
+ *
+ *   model = sign * (measured - offset), clamped to the model's own limits
+ *
+ * Legs default to offset 0 (absolute URDF angles). Arms and head default to the
+ * captured pose as neutral. Signs start at +1 and can be flipped per joint.
+ * The shared baseline is config/joint-calibration.json; local edits live in
+ * localStorage and win when newer.
+ * -------------------------------------------------------------------------- */
+
+const CAL_KEY = 'luka.calibration.v1';
+
+async function loadCalibration() {
+  let shared = null;
+  try {
+    const res = await fetch('./config/joint-calibration.json', { cache: 'no-store' });
+    if (res.ok) shared = await res.json();
+  } catch { /* offline or not bundled */ }
+
+  let local = null;
+  try { local = JSON.parse(localStorage.getItem(CAL_KEY) || 'null'); } catch { /* ignore */ }
+
+  const stamp = (c) => {
+    const v = c?.savedAt || c?.capturedAt;
+    const t = v ? Date.parse(v) : 0;
+    return Number.isFinite(t) ? t : 0;
+  };
+  const cal = stamp(local) >= stamp(shared) ? local : shared;
+  if (!cal?.joints) return null;
+  if (cal.hands) state.referenceHands = cal.hands;
+  return cal;
+}
+
+function calibrated(name, value) {
+  const c = state.calibration?.joints?.[name];
+  if (!c) return value;
+  const out = c.sign * (value - c.offset);
+  const lim = state.limits?.get(name);
+  return lim ? clamp(out, lim[0], lim[1]) : out;
+}
+
+function saveCalibration() {
+  if (!state.calibration) return;
+  state.calibration.savedAt = new Date().toISOString();
+  localStorage.setItem(CAL_KEY, JSON.stringify(state.calibration));
+}
+
+function isArmOrHead(name) {
+  const m = /^idx(\d\d)/.exec(name);
+  const n = m ? Number(m[1]) : 0;
+  return n >= 13 || name === 'joint1' || name === 'joint2';
+}
+
+function captureCalibration() {
+  const live = link.joints;
+  if (!live || !Object.keys(live).length) {
+    safety.note('calibration failed: no measured joints — connect live first', 'error');
+    return;
+  }
+  const prev = state.calibration?.joints || {};
+  const joints = {};
+  for (const name in live) {
+    joints[name] = {
+      offset: isArmOrHead(name) ? live[name] : 0,
+      sign: prev[name]?.sign ?? 1,
+    };
+  }
+  for (const name in (link.neck || {})) {
+    joints[name] = {
+      offset: link.neck[name],
+      sign: prev[name]?.sign ?? 1,
+    };
+  }
+  state.calibration = {
+    version: 1,
+    robot: 'luka',
+    capturedAt: new Date().toISOString(),
+    pose: 'captured from live telemetry',
+    rules: 'legs absolute; arms/head relative to capture; sign per joint',
+    hands: JSON.parse(JSON.stringify(link.hands || {})),
+    joints,
+  };
+  state.referenceHands = JSON.parse(JSON.stringify(link.hands || {}));
+  saveCalibration();
+  renderCalibration();
+  safety.note(`calibration captured · ${Object.keys(joints).length} joints · legs absolute, arms/head offset`, 'warn');
+}
+
+async function resetCalibration() {
+  localStorage.removeItem(CAL_KEY);
+  state.calibration = await loadCalibration();
+  state.referenceHands = state.calibration?.hands || {};
+  safety.note(
+    state.calibration
+      ? 'local calibration cleared — shared baseline restored'
+      : 'local calibration cleared — no shared baseline found',
+    'warn',
+  );
+  renderCalibration();
+}
+
+function downloadCalibration() {
+  if (!state.calibration) return;
+  const blob = new Blob([JSON.stringify(state.calibration, null, 2) + '\n'], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'joint-calibration.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function calibrationLabel(name) {
+  const m = /^idx(\d+)_(.+)$/.exec(name);
+  if (m) return `${Number(m[1])} ${m[2].replace(/_/g, ' ')}`;
+  return name;
+}
+
+function renderCalibration() {
+  const cal = state.calibration;
+  const has = Boolean(cal?.joints);
+  const local = Boolean(localStorage.getItem(CAL_KEY));
+  const tag = $('calState');
+  if (tag) {
+    tag.textContent = has ? (local ? 'local' : 'shared') : 'uncalibrated';
+    tag.dataset.mode = has ? 'live' : 'offline';
+  }
+
+  const list = $('calList');
+  if (!list) return;
+  list.innerHTML = '';
+  state.calRows.clear();
+
+  if (!has) {
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = 'No calibration. Connect live, put him in a known pose, then capture.';
+    list.append(p);
+  } else {
+    const names = Object.keys(cal.joints).sort((a, b) => {
+      const ai = Number((/^idx(\d+)/.exec(a) || [0, 999])[1]);
+      const bi = Number((/^idx(\d+)/.exec(b) || [0, 999])[1]);
+      return ai - bi || a.localeCompare(b);
+    });
+    for (const name of names) {
+      const c = cal.joints[name];
+      const row = document.createElement('div');
+      row.className = 'cal-row';
+
+      const n = document.createElement('span');
+      n.className = 'n';
+      n.textContent = calibrationLabel(name);
+      n.title = name;
+
+      const measured = document.createElement('span');
+      measured.className = 'v';
+
+      const applied = document.createElement('span');
+      applied.className = 'v';
+
+      const sign = document.createElement('button');
+      sign.type = 'button';
+      sign.textContent = c.sign > 0 ? '+' : '−';
+      sign.title = 'flip direction';
+      if (c.sign < 0) sign.classList.add('neg');
+      sign.addEventListener('click', () => {
+        c.sign *= -1;
+        saveCalibration();
+        safety.note(`${name} direction → ${c.sign > 0 ? '+' : '−'}`, 'warn');
+        renderCalibration();
+      });
+
+      const zero = document.createElement('button');
+      zero.type = 'button';
+      zero.textContent = '0';
+      zero.title = 'set offset to the current measured value';
+      zero.addEventListener('click', () => {
+        const v = link.joints?.[name] ?? link.neck?.[name];
+        if (typeof v !== 'number') return;
+        c.offset = v;
+        saveCalibration();
+        safety.note(`${name} offset → ${v.toFixed(3)} rad`, 'warn');
+        renderCalibration();
+      });
+
+      row.append(n, measured, applied, sign, zero);
+      list.append(row);
+      state.calRows.set(name, { measured, applied });
+    }
+  }
+
+  const hasCal = Boolean(state.calibration?.joints);
+  const conv = $('convention');
+  const ref = $('btnReference');
+  const clear = $('btnClearRef');
+  if (conv) conv.disabled = hasCal;
+  if (ref) ref.disabled = hasCal;
+  if (clear) clear.disabled = hasCal;
+
+  const note = $('calNote');
+  if (note) {
+    note.textContent = hasCal
+      ? `${Object.keys(state.calibration.joints).length} joints · captured ${new Date(state.calibration.capturedAt || state.calibration.savedAt).toLocaleString()}`
+      : 'Uncalibrated: the twin falls back to the convention heuristic.';
+  }
+  updateCalibrationValues();
+}
+
+function updateHandReadout() {
+  const el = $('handReadout');
+  if (!el) return;
+  const h = link.hands;
+  if (!link.handsFresh || !h || (!h.left && !h.right)) {
+    el.textContent = 'hand telemetry: none';
+    return;
+  }
+  const line = (label, side) => {
+    const p = h[side] || {};
+    const t = [p.thumb_pos_0, p.thumb_pos_1].filter((v) => typeof v === 'number');
+    const thumb = t.length ? Math.round(t.reduce((a, b) => a + b, 0) / t.length) : '—';
+    const val = (k) => (typeof p[k + '_pos'] === 'number' ? p[k + '_pos'] : '—');
+    return `${label}  I<b>${val('index')}</b> M<b>${val('middle')}</b> R<b>${val('ring')}</b> P<b>${val('pinky')}</b> T<b>${thumb}</b>`;
+  };
+  el.innerHTML = `${line('L', 'left')}<br>${line('R', 'right')}`;
+  el.title = 'GetHandState position channels, 0 = open, 2000 = closed';
+}
+
+function updateCalibrationValues() {
+  updateHandReadout();
+  if (!state.calRows.size) return;
+  for (const [name, row] of state.calRows) {
+    const measured = link.joints?.[name] ?? link.neck?.[name];
+    const applied = state.pose?.[name];
+    row.measured.textContent = typeof measured === 'number' ? measured.toFixed(2) : '—';
+    row.applied.textContent = typeof applied === 'number' ? applied.toFixed(2) : '—';
+  }
 }
 
 function applyPreset(name) {

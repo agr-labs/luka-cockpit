@@ -1,11 +1,16 @@
-name: Deploy to Cloudflare Pages
+name: Test and deploy
 
-# Deploys this repository as a static site. The page has no backend on Pages,
-# so it boots in SIM mode: twin, playback, presets, joint sliders. Live
-# telemetry and the arm path need `node serve.mjs` locally.
+# Two independent jobs:
 #
-# Required repository secrets:
-#   CLOUDFLARE_API_TOKEN   – Pages:Edit
+#   test    — the gateway contract suite. Runs on every push, needs no secrets,
+#             no model payloads and no network beyond the runner.
+#   deploy  — the static cockpit to Cloudflare Pages. Gated on the test job and
+#             on the deployment secrets. When the secrets are absent the gate
+#             reports a notice and the deploy is *skipped*, not failed: a red X
+#             that means "nobody created a token yet" trains people to ignore CI.
+#
+# Required repository secrets for deploy:
+#   CLOUDFLARE_API_TOKEN   – Account → Cloudflare Pages → Edit
 #   CLOUDFLARE_ACCOUNT_ID  – account id
 # Optional repository variable:
 #   CF_PAGES_PROJECT       – defaults to `luka-cockpit`
@@ -13,17 +18,51 @@ name: Deploy to Cloudflare Pages
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-luka-cockpit
+  group: deploy-luka-cockpit-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
+  test:
+    name: Gateway contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Contract, gates and adapters
+        run: node --test gateway/test/*.test.mjs
+
+  secrets:
+    name: Deployment secrets
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.check.outputs.deploy }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            echo "Deployment secrets present."
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Deploy skipped::CLOUDFLARE_API_TOKEN and/or CLOUDFLARE_ACCOUNT_ID are not set. Tests ran; the site was not redeployed. Add both secrets to enable deploys."
+          fi
+
   deploy:
+    name: Deploy to Cloudflare Pages
+    needs: [test, secrets]
+    if: needs.secrets.outputs.deploy == 'true' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,16 +70,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Check deployment secrets
-        env:
-          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          missing=0
-          [ -z "$TOKEN" ] && { echo "::error::CLOUDFLARE_API_TOKEN is not set"; missing=1; }
-          [ -z "$ACCOUNT" ] && { echo "::error::CLOUDFLARE_ACCOUNT_ID is not set"; missing=1; }
-          exit "$missing"
 
       # Model payloads are gitignored (~53 MB), so CI reconstructs them.
       - name: Restore model payloads

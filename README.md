@@ -37,24 +37,54 @@ the local proxy talking to an A2 on the same network.
 | Arm command transport | **blocked** | needs a process on the robot (ROS 2 / SSH) |
 | Arm joint feedback | **solved** | `McDataService/GetJointState`, 26 joints @ 5 Hz |
 | Head / hands telemetry | **works** | `GetNeckState` (2 joints), `GetHandState` (12 channels) |
-| Finger rendering | **approximate** | synthetic boxes — the vendor model has no finger geometry |
+| Finger rendering | **approximate** | 12 position channels mapped absolute (0 open → 2000 closed); geometry is synthetic boxes |
 | Motion action gate | **closed** | Luka is in `McAction_DEFAULT`, which forbids arm commands |
 | Physical motion | **disabled** | `config/arm-schema.json` → `enabled: false` |
 | Static deploy | **works** | Cloudflare Pages, SIM mode, no gateway needed |
+| Robot gateway (simulator) | **works** | 11 capabilities, leases, gates, audit, WS telemetry |
+| Robot gateway (Luka) | **read-only** | 4 verified AimDK reads; every command refused with a reason |
+| Gateway physical writes | **disabled** | gateway flag + verified adapter path + manual lease |
+| Suspended test profile | **locked** | locomotion and leg posture blocked in software, before any adapter |
+| Face state (read) | **not exposed** | expression player is reachable on :59001; no getter for the current face |
+| Audio state (read) | **unreachable** | TTS/volume RPCs on :59301/:56666 are not exposed on the Wi-Fi IP |
+| Room sensors | **works** | opt-in mic/VAD and camera luminance/motion, streamed to the dashboard at 5 Hz |
+| Joint calibration | **shared baseline** | per-joint offset/sign, legs absolute; direction pass pending |
+| LiDAR viewer | **works** | WebGL2 live/accumulate/voxel, binary WS, simulated room at 10 Hz |
+| LiDAR (physical) | **blocked** | Mid-360 topic is ROS 2-only; ingest endpoint ready, no publisher exists |
+| SSH access | **blocked** | key-only daemon, no authorised key on this Mac — [access](docs/access.md) |
+| Robot-side sandbox | **designed** | shim + unprivileged jobs, no motion authority — [sandbox](docs/sandbox.md) |
 
 Nothing in this repository can move Luka today. That is deliberate and enforced in
-three places: the proxy allowlist, the schema interlock, and the action gate.
+four independent places: the proxy allowlist, the schema interlock, the action gate,
+and the gateway's capability and profile gates.
 
 ## Quickstart
 
 ```sh
 node serve.mjs                                  # cockpit on :8787
+node gateway/server.mjs                         # gateway + console on :8788
+npm test                                        # gateway contract suite
 curl -s localhost:8787/api/health               # proxy + robot target
 curl -s -X POST localhost:8787/api/robot/getAction | python3 -m json.tool | head -12
 ```
 
-In the page: **connect live** to poll Luka, **play** to replay a recording, drag/wheel to
+In the cockpit: **connect live** to poll Luka, **play** to replay a recording, drag/wheel to
 orbit, `space` for deadman, `esc` for the software stop.
+
+The digital twin is a separate server: `node serve.mjs` on `:8787` (or
+<https://luka.steadwell.cc>). The dashboard header links to it as **twin**.
+
+For a tablet on the same Wi-Fi, bind the gateway to the LAN and use the token URL:
+
+```sh
+GATEWAY_TOKEN=$(openssl rand -hex 16) node gateway/server.mjs --host 0.0.0.0
+# http://<mac-ip>:8788/?token=<token>
+```
+
+
+In the gateway console (`:8788`): pick a robot, acquire a lease, send a capability command,
+watch telemetry and the audit trail, latch the software stop. The simulator exercises all
+eleven capabilities; Luka exercises the read path and refuses everything else with a code.
 
 ## The four gates between us and motion
 
@@ -67,9 +97,15 @@ orbit, `space` for deadman, `esc` for the software stop.
 3. **Joint feedback.** There is no HTTP route to arm angles — nine candidates 404'd. The
    topic takes *absolute* positions, so publishing before we know the current pose is a
    blind jump of unknown size.
-4. **Credentials.** The SSH account is `agi`; the password lives in `password.md` inside
-   the AimDK package, which AGIBOT does not publish. That package is the remaining
-   procurement task.
+4. **Credentials.** The SSH account is `agi` and the installed daemon is **publickey-only** —
+   password authentication is disabled. No key is provisioned here, so there is no
+   robot-side path: no ROS 2 process, no arm topic. Read-only checks and discovery are in
+   `tools/luka-ssh.sh`.
+
+The gateway adds a fifth gate that is independent of all four: a capability is only
+commandable when its adapter declares a verified write path, the gateway permits physical
+writes, and the lease is `manual` or `assisted`. Today no adapter makes that claim, so the
+answer to "can anything move him through the API" is no, twice over.
 
 ## Reading order
 
@@ -81,6 +117,10 @@ orbit, `space` for deadman, `esc` for the software stop.
 | [docs/decisions.md](docs/decisions.md) | why the dangerous-looking choices are the safe ones |
 | [docs/sdk-notes.md](docs/sdk-notes.md) | vendor SDK contents, the control-source model, what it does and doesn't unlock |
 | [docs/deploy.md](docs/deploy.md) | static build, CI, payload limits, sim-vs-local parity |
+| [docs/gateway.md](docs/gateway.md) | the Robot API contract, gate order, adapters, suspended profile, room sensors, LiDAR pipeline |
+| [docs/access.md](docs/access.md) | SSH state, the 2026-11-03 lockout, the recovery ladder |
+| [docs/calibration.md](docs/calibration.md) | why the twin's arms did not match, and the per-joint calibration |
+| [docs/sandbox.md](docs/sandbox.md) | robot-side sandbox, deployment flow, outbound-only inference |
 
 ## Two modes, on purpose
 

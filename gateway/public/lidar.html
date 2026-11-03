@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070a">
+<title>LiDAR space — Steadwell</title>
+<link rel="stylesheet" href="./console.css">
+</head>
+<body class="lidar-page">
+
+<header class="top lidar-top">
+  <div class="brand">
+    <span class="dot" data-state="down" id="linkDot"></span>
+    <strong>LiDAR space</strong>
+    <span class="tag" id="sourceTag">connecting…</span>
+  </div>
+  <div class="top-right">
+    <span id="hudClock" class="meta"></span>
+    <a class="tag" href="./room.html">room sensors</a>
+    <a class="tag" href="./">console</a>
+  </div>
+</header>
+
+<main class="lidar-main">
+  <canvas id="view"></canvas>
+
+  <div class="lidar-hud">
+    <div class="hud-row"><span class="hud-k">robot</span><span class="hud-v" id="robotId">—</span></div>
+    <div class="hud-row"><span class="hud-k">source</span><span class="hud-v" id="source">—</span></div>
+    <div class="hud-row"><span class="hud-k">frame</span><span class="hud-v" id="framePts">—</span></div>
+    <div class="hud-row"><span class="hud-k">points</span><span class="hud-v" id="totalPts">—</span></div>
+    <div class="hud-row"><span class="hud-k">rate</span><span class="hud-v" id="rate">—</span></div>
+    <div class="hud-row"><span class="hud-k">age</span><span class="hud-v" id="age">—</span></div>
+  </div>
+
+  <div class="lidar-controls">
+    <div class="seg" role="group" aria-label="accumulation">
+      <button id="modeLive" class="seg-btn" aria-pressed="true">live frame</button>
+      <button id="modeAccum" class="seg-btn" aria-pressed="false">accumulate</button>
+    </div>
+    <label class="inline">colour
+      <select id="colour">
+        <option value="height">height</option>
+        <option value="distance">distance</option>
+        <option value="flat">flat</option>
+      </select>
+    </label>
+    <label class="inline">size <input id="pointSize" type="range" min="1" max="6" step="0.5" value="2.4"></label>
+    <label class="inline"><input id="voxel" type="checkbox"> voxel 0.1 m</label>
+    <button id="reset" class="ghost">reset view</button>
+    <button id="clear" class="ghost">clear</button>
+    <span class="fine" id="note"></span>
+  </div>
+
+  <div class="lidar-empty" id="empty">
+    <h2>No LiDAR frames</h2>
+    <p id="emptyText">Waiting for the first frame…</p>
+    <p class="fine">
+      The real sensor is a Livox Mid-360 on <code>/aima/hal/lidar/neck/pointcloud</code> (ROS 2, 10 Hz).
+      No bridge on the Wi-Fi interface speaks ROS 2, so a physical robot produces no frames until a
+      robot-side publisher POSTs them to <code>/api/v1/robots/:id/lidar</code>.
+    </p>
+  </div>
+</main>
+
+<script type="module" src="./lidar.js"></script>
+</body>
+</html>

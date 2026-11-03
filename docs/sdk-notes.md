@@ -120,6 +120,20 @@ The response also carries a `commands` array; it was empty on our unit.
 | `GetNeckState` | `idx27_head_joint1` (*shake*) and `idx28_head_joint2` (*nod*) |
 | `GetHandState` | per hand: 6 finger positions (`thumb_pos_0/1`, `index`, `middle`, `ring`, `pinky`), range 0–2000 |
 
+Observed on 2026-11-03, the installed firmware nests both calls and the sample above is the
+flattened form:
+
+```json
+GetNeckState → {"data":{"shake":{"name":"idx27_head_joint1","position":…},
+                        "nod":{"name":"idx28_head_joint2","position":…}}}
+GetHandState → {"data":{"left":{"agi_hand":{"finger":{
+                   "pos":{"thumb_pos_0":…,"thumb_pos_1":…, …},
+                   "toq":{"thumb_toq_0":…, …}}}}}}
+```
+
+`pos` is the 0–2000 position channel; `toq` is torque and must never be read as position.
+Fully open hands report 0–4 counts rather than mid-range values.
+
 Sample from our unit while standing:
 
 ```

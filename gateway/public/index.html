@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c0f">
+<title>Steadwell Robot Gateway</title>
+<link rel="stylesheet" href="./console.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="dot" id="gwDot" data-state="down"></span>
+    <strong>Steadwell Robot Gateway</strong>
+    <span class="tag">v1</span>
+  </div>
+  <div class="top-right">
+    <span id="gwMeta" class="meta">connecting…</span>
+    <a id="twinLink" class="tag" href="http://127.0.0.1:8787/" title="Digital twin — cockpit server on :8787">twin</a>
+    <a class="tag" href="./lidar.html">lidar space</a>
+    <a class="tag" href="./room.html">room sensors</a>
+    <button id="btnAuth" class="ghost small" hidden>token</button>
+  </div>
+</header>
+
+<div id="authBar" class="auth-bar" hidden>
+  <label for="tokenInput">Bearer token</label>
+  <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="GATEWAY_TOKEN">
+  <button id="btnTokenSave">use token</button>
+  <span class="fine">Stored for this tab only.</span>
+</div>
+
+<main>
+  <aside class="col rail">
+    <section class="card">
+      <div class="card-head"><h2>Robots</h2><span id="robotCount" class="meta"></span></div>
+      <div id="robotList" class="robot-list"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Gateway</h2></div>
+      <dl id="gwInfo" class="kv"></dl>
+    </section>
+  </aside>
+
+  <section class="col main-col">
+    <div id="stopBanner" class="banner" hidden></div>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 id="robotTitle">Robot</h2>
+        <span id="robotBadges" class="badges"></span>
+      </div>
+      <div id="stateGrid" class="state-grid"></div>
+      <div id="profileGrid" class="profile-grid"></div>
+      <div id="stateNotes" class="notes"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Control lease</h2>
+        <span id="leaseState" class="meta"></span>
+      </div>
+      <div class="lease-row">
+        <label>holder <input id="holderInput" spellcheck="false"></label>
+        <label>mode <select id="modeSelect"></select></label>
+        <label>ttl <select id="ttlSelect">
+          <option value="15000">15 s</option>
+          <option value="30000" selected>30 s</option>
+          <option value="60000">60 s</option>
+          <option value="120000">120 s</option>
+        </select></label>
+        <button id="btnLease">acquire</button>
+        <button id="btnRenew" class="ghost" disabled>renew</button>
+        <button id="btnRelease" class="ghost" disabled>release</button>
+      </div>
+      <div id="leaseDetail" class="notes"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Command</h2>
+        <select id="capSelect" aria-label="capability"></select>
+      </div>
+      <div id="capMeta" class="notes"></div>
+      <form id="cmdForm" class="cmd-form" autocomplete="off"></form>
+      <div class="cmd-actions">
+        <button id="btnSend" type="button">send command</button>
+        <span id="deadlineNote" class="fine"></span>
+      </div>
+      <pre id="cmdResult" class="result" hidden></pre>
+    </section>
+
+    <section class="card danger">
+      <div class="card-head"><h2>Stop</h2><span class="tag bad">not certified</span></div>
+      <p class="fine">
+        The software stop latches this gateway, revokes leases and asks the adapter to stop.
+        It does not reach the manufacturer's safety system. The factory e-stop is the only
+        certified stop.
+      </p>
+      <div class="stop-row">
+        <button id="btnStop" class="stop">SOFTWARE STOP</button>
+        <button id="btnRearm" class="ghost">clear latch…</button>
+      </div>
+      <div id="stopDetail" class="notes"></div>
+    </section>
+  </section>
+
+  <section class="col side">
+    <section class="card">
+      <div class="card-head"><h2>Room sensors</h2><span id="presenceMeta" class="meta">no stream</span></div>
+      <div id="presenceBody" class="presence"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Telemetry</h2><span id="wsState" class="meta">idle</span></div>
+      <div id="telemetry" class="telemetry">
+        <p class="empty">No stream yet.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Audit</h2><span id="auditSeq" class="meta"></span></div>
+      <ol id="audit" class="audit"></ol>
+    </section>
+  </section>
+</main>
+
+<script type="module" src="./console.js"></script>
+</body>
+</html>

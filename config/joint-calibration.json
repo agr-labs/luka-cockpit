@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "robot": "luka",
+  "capturedAt": "2026-11-03T15:37:19.007Z",
+  "pose": "rope-assisted straight-leg standing, arms hanging, rig taking weight",
+  "source": "McDataService/GetJointState + GetNeckState (2026-11-03)",
+  "rules": "Legs (idx01-12) use absolute URDF angles, offset 0. Arms (idx13-26) and head (joint1/2) are relative to the captured pose. Sign +1 means the twin follows the reported direction; flip per joint if motion runs backwards.",
+  "hands": {
+    "left": {
+      "thumb_pos_0": 532,
+      "thumb_pos_1": 1055,
+      "index_pos": 1077,
+      "middle_pos": 1078,
+      "ring_pos": 1075,
+      "pinky_pos": 1078
+    },
+    "right": {
+      "thumb_pos_0": 465,
+      "thumb_pos_1": 1080,
+      "index_pos": 1076,
+      "middle_pos": 1075,
+      "ring_pos": 1069,
+      "pinky_pos": 1067
+    }
+  },
+  "joints": {
+    "idx01_left_hip_roll": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx02_left_hip_yaw": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx03_left_hip_pitch": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx04_left_tarsus": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx05_left_toe_pitch": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx06_left_toe_roll": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx07_right_hip_roll": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx08_right_hip_yaw": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx09_right_hip_pitch": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx10_right_tarsus": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx11_right_toe_pitch": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx12_right_toe_roll": {
+      "offset": 0,
+      "sign": 1
+    },
+    "idx13_left_arm_joint1": {
+      "offset": -0.092356,
+      "sign": 1
+    },
+    "idx14_left_arm_joint2": {
+      "offset": 1.239315,
+      "sign": 1
+    },
+    "idx15_left_arm_joint3": {
+      "offset": 0.077752,
+      "sign": 1
+    },
+    "idx16_left_arm_joint4": {
+      "offset": -0.139542,
+      "sign": 1
+    },
+    "idx17_left_arm_joint5": {
+      "offset": 1.653803,
+      "sign": 1
+    },
+    "idx18_left_arm_joint6": {
+      "offset": 0.051697,
+      "sign": 1
+    },
+    "idx19_left_arm_joint7": {
+      "offset": -0.021685,
+      "sign": 1
+    },
+    "idx20_right_arm_joint1": {
+      "offset": 1.064045,
+      "sign": 1
+    },
+    "idx21_right_arm_joint2": {
+      "offset": -1.265591,
+      "sign": 1
+    },
+    "idx22_right_arm_joint3": {
+      "offset": 0.347952,
+      "sign": 1
+    },
+    "idx23_right_arm_joint4": {
+      "offset": 1.062024,
+      "sign": 1
+    },
+    "idx24_right_arm_joint5": {
+      "offset": 2.396975,
+      "sign": 1
+    },
+    "idx25_right_arm_joint6": {
+      "offset": -0.432049,
+      "sign": 1
+    },
+    "idx26_right_arm_joint7": {
+      "offset": 0.200181,
+      "sign": 1
+    },
+    "idx27_head_joint1": {
+      "offset": 0.005467,
+      "sign": 1
+    },
+    "idx28_head_joint2": {
+      "offset": 0.009979,
+      "sign": 1
+    }
+  }
+}

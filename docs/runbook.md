@@ -9,7 +9,7 @@ Operational procedures only. Interface facts live in
 |---|---|
 | Luka (X86) | `192.168.4.136` · MAC `ac:45:ef:a4:81:4d` |
 | This Mac | `192.168.4.138/22` on `en0` (Wi-Fi) |
-| SSH | port 22 · account **`agi`** |
+| SSH | port 22 · account **`agi`** · **publickey only** (verified 2026-11-03) |
 | Action gateway | port `56322` — `McActionService`, `McDataService` |
 | Motion command gateway | port `56444` — `MotionCommandService` (e.g. `DisableMotionPlayer`) |
 | Closed | 80, 443, 8080, and 40 probed app routes on 5000 |
@@ -22,8 +22,17 @@ Operational procedures only. Interface facts live in
 | ORIN AP hotspot | join `Robot-…`, `ssh agi@192.168.88.88` | untried |
 | Via X86, then ORIN | `ssh agi@192.168.4.136`, then `ssh agi@192.168.100.110` | works — this is our path |
 
-The SSH password is in `password.md` inside the AimDK package, per the vendor guide.
-It is not published, and it is not on this Mac (searched Downloads/Desktop/Documents).
+The SSH credential is **operator-held** and is not stored in this repository. It is weak by
+any standard: treat Luka as belonging on an isolated network until it is changed through the
+manufacturer's supported path. `password.md` inside the third-party AimDK archive remains
+unopened ([D10](decisions.md)) — the operator's own knowledge is the source here, not a mirror.
+
+DHCP can move him off `.136`. Find him by MAC when that happens:
+
+```sh
+sh tools/luka-ssh.sh discover --yes     # one ICMP echo per address in the /22, then ARP
+LUKA_HOST=192.168.4.x LUKA_SSH_PASSWORD=… sh tools/luka-ssh.sh auth
+```
 
 ## 2. Power-on sequence
 
@@ -149,7 +158,61 @@ May stop factory preset gestures.
 Publish a stream at the measured pose before any deliberate movement. Then one joint,
 one degree, watching. Never the first command as a jump.
 
-## 7. Shutting down
+## 7. Robot gateway and the suspended profile
+
+```sh
+node gateway/server.mjs                 # console on http://127.0.0.1:8788/
+#   /lidar.html  — WebGL2 point cloud, simulated room at 10 Hz
+#   /room.html   — microphone and camera sensors, publish to the dashboard
+GATEWAY_TOKEN=… node gateway/server.mjs # require a bearer token
+npm test                                # 99 contract/gate/presence/lidar tests, no robot needed
+```
+
+The console is the reference client: acquire a lease, send a capability command, watch
+telemetry and the audit trail. For twin-vs-robot alignment, see
+[calibration](calibration.md) — capture the hanging pose, then flip any joint that runs
+backwards. The simulator robot (`luka-sim`) exercises all eleven
+capabilities. The real robot (`luka`) is read-only and refuses commands with a code and a
+reason.
+
+**Suspended test profile.** Luka is fully suspended, feet clear, full weight on the rig. The
+profile locks `base.velocity` and `legs.posture` in software, before any adapter is consulted:
+
+```sh
+curl -s localhost:8788/api/v1/robots/luka/state | python3 -m json.tool | head -30
+# profile.name        "suspended-test"
+# profile.locomotion  "locked"
+# profile.armControl  "simulation only"
+```
+
+A locomotion command returns `409 profile_lock` even when the robot is offline, because the
+lock is configuration rather than a capability gap. Removing it is a reviewed change in
+`gateway/config/robots.json`.
+
+The profile does not relax the legs and does not assert that upper-body servo makes them
+passive. That stays a hardware question until AimMaster's Movement screen and the firmware
+documentation answer it.
+
+**Robot-side test code** goes through the sandbox design in [sandbox.md](sandbox.md): a reviewed
+shim owns ROS 2, arbitrary jobs run unprivileged with no devices, no `/agibot`, caps and a TTL.
+Nothing there is deployed yet — it waits on the same access as everything else.
+
+**SSH access.** The daemon is **key-only** (all accounts, verified 2026-11-03) and no authorised
+key is on this Mac. The full evidence, the 2026-11-03 lockout and the recovery ladder are in
+[access.md](access.md). Do not re-enable password auth to work around it.
+
+```sh
+sh tools/luka-ssh.sh --explain          # manifest: every remote command, verbatim
+sh tools/luka-ssh.sh check              # TCP 22, no login
+sh tools/luka-ssh.sh discover --yes     # when DHCP has moved him: bounded /22 sweep by MAC
+LUKA_SSH_KEY=.secrets/luka_ed25519 sh tools/luka-ssh.sh auth   # once authorised
+```
+
+Before blaming the credential, check the subnet: the Mac's address has moved before
+(`ipconfig getifaddr en0`). Luka lives on `192.168.4.0/22`; a Mac on `192.168.9.0/24` cannot
+reach him at all, and `curl` returns `000` for a link that is merely off-subnet.
+
+## 8. Shutting down
 
 ```sh
 # stop the cockpit (Ctrl-C in its terminal, or:)

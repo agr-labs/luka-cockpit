@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c0f">
+<title>Room sensors — Steadwell</title>
+<link rel="stylesheet" href="./console.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="dot" data-state="down" id="roomDot"></span>
+    <strong>Room sensors</strong>
+    <span class="tag">this Mac, not the robot</span>
+  </div>
+  <div class="top-right">
+    <span id="clock" class="meta"></span>
+    <a class="tag" href="./lidar.html">lidar space</a>
+    <a class="tag" href="./">gateway console</a>
+  </div>
+</header>
+
+<main class="room">
+  <section class="card">
+    <div class="card-head">
+      <h2>Microphone</h2>
+      <span id="micStatus" class="meta">idle</span>
+    </div>
+    <p class="fine">
+      Measures the sound actually leaving the robot's speaker (plus the room).
+      The robot exposes no audio-level or TTS-state API on a reachable port, so this is ground truth.
+    </p>
+    <div class="room-actions">
+      <button id="micBtn">start microphone</button>
+      <button id="micStop" class="ghost" disabled>stop</button>
+    </div>
+    <div class="readout">
+      <div><span id="micDb" class="big">—</span><span class="unit">dBFS</span></div>
+      <div class="pill" id="micState">idle</div>
+    </div>
+    <canvas id="micCanvas" width="640" height="96" class="scope"></canvas>
+    <dl id="micInfo" class="kv"></dl>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Camera</h2>
+      <span id="camStatus" class="meta">idle</span>
+    </div>
+    <p class="fine">
+      Point this at Luka's face screen. Luminance and frame motion change when the display animates;
+      this measures light, not emotion, and nothing is recorded or uploaded.
+    </p>
+    <div class="room-actions">
+      <button id="camBtn">start camera</button>
+      <button id="camStop" class="ghost" disabled>stop</button>
+    </div>
+    <div class="room-video">
+      <video id="video" playsinline muted hidden></video>
+      <canvas id="camCanvas" width="320" height="240"></canvas>
+    </div>
+    <div class="readout">
+      <div><span id="lum" class="big">—</span><span class="unit">/ 255 luminance</span></div>
+      <div><span id="motion" class="big">—</span><span class="unit">frame Δ</span></div>
+    </div>
+    <dl id="camInfo" class="kv"></dl>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Stream to dashboard</h2>
+      <span id="pubStatus" class="meta">idle</span>
+    </div>
+    <div class="room-actions">
+      <label class="inline">robot <select id="robotSelect"></select></label>
+      <label class="inline">token <input id="pubToken" type="password" placeholder="optional" autocomplete="off" spellcheck="false"></label>
+      <button id="pubApply" class="ghost">apply</button>
+      <button id="pubToggle" class="ghost" disabled>pause</button>
+    </div>
+    <p class="fine">
+      Only numbers leave this page: dBFS, VAD, luminance, frame motion, and device labels.
+      No audio, no frames, no recording. Samples are sent at 5 Hz while a sensor is live and the tab is visible.
+    </p>
+    <dl id="pubInfo" class="kv"></dl>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Why this page exists</h2></div>
+    <p class="fine">
+      The vendor interface has a face <em>player</em> (<code>RcEmoticonPlayerService/PlayerEmoticon</code>,
+      port 59001, reachable) but no getter for the current expression. Audio status
+      (<code>TTSService/GetAudioStatus</code>) and volume (<code>HalAudioService/GetAudioVolume</code>)
+      live on ports 59301 and 56666, which are not exposed on the Wi-Fi interface. Microphone audio is a
+      ROS 2 topic behind an SSH-only process.
+    </p>
+    <p class="fine">
+      So: the robot can be told to show a face, and can be heard, but it cannot currently report either.
+      These two sensors close that gap physically. Camera and microphone stay in this tab; there is no
+      upload path and no recording.
+    </p>
+    <dl class="kv">
+      <dt>face state (API)</dt><dd>not readable</dd>
+      <dt>face control (API)</dt><dd>reachable, not authorised</dd>
+      <dt>audio state (API)</dt><dd>unreachable</dd>
+      <dt>audio measured</dt><dd>this Mac's microphone</dd>
+      <dt>face measured</dt><dd>this Mac's camera</dd>
+    </dl>
+  </section>
+</main>
+
+<script type="module" src="./room.js"></script>
+</body>
+</html>

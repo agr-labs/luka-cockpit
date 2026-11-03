@@ -47,7 +47,10 @@ robot-side path exists and someone tests it deliberately.
 3. **Joint feedback** — no HTTP route to arm angles. Unresolved: needs ROS 2 access.
    This is the one that makes a first command unsafe regardless of the other three,
    because the topic takes absolute positions.
-4. **SSH credentials** — `agi` + the password in `password.md` from the AimDK package.
+4. **SSH access** — `agi` over **publickey only**; password authentication is disabled on
+   the installed image. No key is provisioned on this Mac, so there is no robot-side path:
+   no ROS 2 process can be installed, and the arm topic stays out of reach. Read-only checks
+   live in `tools/luka-ssh.sh`; nothing on the robot is installed or changed by it.
 
 ## What live mirroring does and does not mean
 
@@ -91,3 +94,55 @@ Open: the vendor's `idx26` limit is printed as `0.35 ~ 0.35`, almost certainly a
 
 The controller-preservation test table in the [README](../README.md) is still empty for
 exactly these reasons.
+
+---
+
+# The gateway layer
+
+`gateway/` adds a second authority model above the proxy. It is independent of the arm
+schema and of the proxy allowlist, so a mistake in one does not open the other.
+
+| Guard | What it does | Tested? |
+|---|---|---|
+| Profile locks | refuses `base.velocity` / `legs.posture` on the suspended profile before any adapter is consulted | yes, `profile.test.mjs` |
+| Capability gate | a commandable capability requires an adapter that declares `commandable` *and* a verified write path | yes, `physical.test.mjs` |
+| Gateway physical flag | `GATEWAY_ALLOW_PHYSICAL=1` is required in addition to the adapter's claim | yes |
+| Mode gate | `observe` cannot command; `simulate` can never reach a physical robot | yes |
+| Configuration gate | capabilities requiring a floor refuse a suspended robot | yes |
+| Lease | exclusive, expiring, epoch-stamped; revoked by the stop | yes, `lease.test.mjs` |
+| Validation | schema + documented limits; refuses with the bound, never clamps | yes, `contract.test.mjs` |
+| Deadline | absolute expiry per command | yes |
+| Rate limit | 60/s sustained, 120 burst per robot | yes |
+| **Software stop** | latches, revokes leases, asks the adapter to stop, reports `delivered` | **UI + simulator only** |
+
+## The gateway stop is not an emergency stop
+
+The stop response carries `certified: false` and the adapter's own answer. On the AimDK
+adapter that answer is `supported: false, delivered: false`: it is a read-only telemetry
+adapter and there is nothing for it to stop. The console displays both facts.
+
+The latch is still useful: it blocks every gateway command, revokes leases, and forces an
+explicit, audited `POST /rearm`. What it must never do is imply that it reached the
+manufacturer's safety system.
+
+## The suspended profile is policy, not physics
+
+Luka is suspended with his feet clear. The profile records that, and locks locomotion and
+leg-posture commands. It does **not**:
+
+- relax the legs;
+- claim that upper-body servo makes the legs passive;
+- make a grounded robot's feet-contact procedure optional;
+- replace the rig, the e-stop, or a human watching the first motion.
+
+Whether `PASSIVE_UPPER_BODY_*` or `RL_*_ARM_EXT_JOINT_SERVO` changes leg behaviour on this
+firmware is an open question, and the gateway's configuration fields (`configuration` and
+`profile`) exist so that it cannot be silently answered by assumption.
+
+## Compute is not authority
+
+The robot-side sandbox ([sandbox.md](sandbox.md)) protects the robot's software from test code:
+no `/agibot`, no devices, no loopback, no privileges, capped and time-limited. It is **not** a
+safety layer. It grants no motion authority, and a job that "ran fine in the sandbox" says
+nothing about whether a command is safe to send. Motion still requires the lease, capability and
+physical-write gates above, and the factory e-stop remains the only certified stop.

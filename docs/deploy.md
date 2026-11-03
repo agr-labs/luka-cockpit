@@ -19,15 +19,24 @@ fires a probe that would 404 in a visitor's console.
 
 ## What CI does
 
-`.github/workflows/deploy.yml` in this repository — runs on pushes to `main`, manual
-dispatch allowed.
+`.github/workflows/deploy.yml` in this repository — runs on pushes to `main`, pull
+requests, and manual dispatch. Three jobs:
 
-1. `tools/fetch-model.sh` — clones the upstream model repo and restores the gitignored
-   payloads (URDF, 47 STLs, 3 recordings, MJCF).
-2. `node tools/build-model.mjs` — regenerates `model/generated/*` with count assertions.
-3. `node tools/package-site.mjs` — assembles `dist/` (runtime files only; source meshes,
-   URDF and MJCF are build inputs and are excluded).
-4. `wrangler pages deploy dist` — uploads.
+1. **test** — `node --test gateway/test/*.test.mjs`. No secrets, no model payloads, no
+   network. This is the job that must stay green; it is the gateway's contract.
+2. **secrets** — checks whether the two Cloudflare secrets exist and exports
+   `deploy=true|false`. Missing secrets produce an `::notice::` and `deploy=false`.
+3. **deploy** — only runs when the gate says yes, then:
+   - `tools/fetch-model.sh` — clones the upstream model repo and restores the gitignored
+     payloads (URDF, 47 STLs, 3 recordings, MJCF).
+   - `node tools/build-model.mjs` — regenerates `model/generated/*` with count assertions.
+   - `node tools/package-site.mjs` — assembles `dist/` (runtime files only; source meshes,
+     URDF and MJCF are build inputs and are excluded).
+   - `wrangler pages deploy dist` — uploads.
+
+A deploy that never ran is reported as **skipped**, not failed. The previous workflow
+failed at a secrets gate on every push, which made a red X the steady state and trained
+everyone to ignore CI.
 
 FK verification (`tools/verify-fk.mjs`) is deliberately **not** in the deploy path: it
 needs MuJoCo, and a Pages deploy should not depend on a Python simulation stack being
@@ -64,8 +73,16 @@ Repo secrets:
 
 Repo variable (optional): `CF_PAGES_PROJECT`, defaults to `luka-cockpit`.
 
-The workflow fails early with an explicit `::error::` if a secret is missing, rather than
-dying inside wrangler.
+Without both secrets the deploy job is skipped with a notice, and the test job still runs.
+With them, the deploy is reproducible from `main`; nothing is deployed by hand.
+
+Create the token at *My Profile → API Tokens* with **Account → Cloudflare Pages → Edit**,
+then:
+
+```sh
+gh secret set CLOUDFLARE_API_TOKEN --repo agr-labs/luka-cockpit
+gh secret set CLOUDFLARE_ACCOUNT_ID --repo agr-labs/luka-cockpit --body 2d571f0977b553c7565fb74ee54db998
+```
 
 ## Payload
 

@@ -79,8 +79,8 @@ requires a process on the robot.
 | `McActionService/GetAvailableActions` | 25 action names the unit supports |
 | `McActionService/SetAction` | write — see §1.2 |
 | `McDataService/GetJointAngle` | same 26 joints, different shape |
-| `McDataService/GetNeckState` | `idx27_head_joint1`, `idx28_head_joint2` |
-| `McDataService/GetHandState` | 6 finger positions per hand, 0–2000 |
+| `McDataService/GetNeckState` | `data.shake.position` (idx27), `data.nod.position` (idx28) |
+| `McDataService/GetHandState` | `data.<side>.agi_hand.finger.pos` — 6 channels per hand, 0–2000 (0 fully open, 2000 fully closed); a sibling `toq` block is torque, not position |
 
 `GetAvailableActions` matters because it is the robot's own truth: it lists `CURLED_UP` and
 `PACKAGE_SIT`, which the public v2.1 table does not. Where the website and the robot disagree,
@@ -90,7 +90,10 @@ the robot wins.
 finger channels (6 per hand), all read-only.
 
 Finger rendering needs a caveat the other two do not: the vendor URDF has **no finger
-geometry and no finger joints** — each hand is a single STL. The cockpit therefore appends
+geometry and no finger joints** — each hand is a single STL. The cockpit maps the reported
+channel **absolutely** (0 open → 2000 closed); it does not subtract a captured "straight"
+reference, because a hand sitting at 1075 is half-closed, not open. The live readout in the
+calibration panel shows all six channels per hand. The cockpit therefore appends
 ten **synthetic** finger boxes, positioned from the hand link's bounding box and curled from
 the telemetry. They are an approximation and are labelled as such in code; they never feed
 anything back to the robot.
@@ -105,6 +108,20 @@ Our requests carried `ControlSource_SAFE`; the active source was presumably `MAN
 controller). Transport accepted, MC filtered — which is exactly what we observed. **This is
 documentation-level evidence, not proof:** the getter (`McService/GetAimMasterControlSource`)
 is not exposed on the gateway, tested and 404.
+
+## 1.6b Third-party ROS bridge (Illeon) — checked, not installed
+
+Illeon's documentation describes a ROS 2-to-browser bridge on port `9000`. That is their
+software, not AGIBOT's, and **operator-confirmed it is not installed on Luka**. The unit runs
+AGIBOT's native stack.
+
+So port `9000` is not an interface we should expect to find, and installing a third-party
+control daemon is not on the table: it would replace or interpose on the factory motion
+stack, which is the one thing this project has consistently refused to do.
+
+What the lead was still worth: it confirms that a ROS 2-to-browser bridge is a solved shape,
+which is why our gateway keeps the browser contract and leaves any ROS 2 transport to a
+robot-side adapter.
 
 ## 1.5b Per-joint limits (vendor guide §7.1.9, radians)
 
@@ -124,6 +141,52 @@ narrower "yellow region" for the coupled wrist: joints 6/7 at **±0.30 / ±0.20*
 The cockpit clamps to `max(model, documented)` ∩ envelope, and reports which layer binds.
 
 ---
+
+## 1.8 Face and audio (checked 2026-11-03)
+
+The face is a display on the X86 driven by AimMaster Face; the `rc` module wraps it. Audio is
+the onboard speaker through `hal_audio`, with TTS available when online.
+
+| Interface | Port | Reachable from the Mac? | Read/write |
+|---|---|---|---|
+| `RcEmoticonPlayerService/PlayerEmoticon` | `59001` | **yes** — JSON-RPC, CORS enabled | write (plays an expression) |
+| `ResourceService/GetEmoticon` (list) | `51049` | no | read |
+| `TTSService/PlayTTS`, `PlayMediaFile`, `StopTTSTraceId` | `59301` (also `59201`) | no | write |
+| `TTSService/GetAudioStatus` | `59301` | no | read |
+| `HalAudioService/GetAudioVolume` | `56666` | no | read |
+| `AgentControlService/*` (mic source, voice enable, mode) | `59301` | no | mixed |
+| Microphone audio, TTS status, face ID, wake word | ROS 2 topics | no | read |
+
+Consequences, stated plainly:
+
+- The face can be **commanded** from the Wi-Fi interface but not **read**. There is no documented
+  getter for the current expression, and `GetEmoticon` is on a port that is not exposed.
+- Audio **state** (playing, volume, mute, speaker type) is not reachable. The TTS/agent/audio
+  services live on `192.168.100.110` and only `59001` appears on `192.168.4.136`.
+- Microphone audio and face recognition are ROS 2 topics behind the SSH-only process path, so
+  they are out of reach for the same reason the arm topic is.
+- `PlayerEmoticon` was **not called**. It is a write with visible effect on a running robot.
+
+To measure either quantity in real time, measure the physical output: a microphone for the
+speaker and a camera for the display (`gateway/public/room.html`).
+
+## 1.9 LiDAR (checked 2026-11-03)
+
+The unit carries a **Livox Mid-360 on the neck**, published as:
+
+```
+/aima/hal/lidar/neck/pointcloud    sensor_msgs/PointCloud2    10 Hz
+/aima/hal/lidar/neck/imu           sensor_msgs/Imu            200 Hz
+```
+
+Calibration lives on the robot at `/agibot/data/param/calibration/`:
+`extrinsic_baselink_T_lidar.txt` (base_link → lidar, `x y z qw qx qy qz`), plus camera
+intrinsics/extrinsics. Every sensor is a **ROS 2 topic**; the vendor exposes no HTTP RPC for
+point clouds.
+
+Reachability, same as the arm topic: none from here. A bounded check found only 22, 5000, 56322,
+59001 and 56444 open, with no rosbridge (9090) or Foxglove bridge (8765). The gateway therefore
+carries a simulator and a binary ingest endpoint, and waits for a robot-side publisher.
 
 # 2. The motion state machine, as observed
 
@@ -207,6 +270,33 @@ polling ran. No interference observed. First controller-preservation evidence.
 **08:32 — joint telemetry found** in the vendor SDK; proxy endpoint added; the twin mirrors
 26 joints live.
 
+**11-03 — SSH is key-only, and we are locked out.** `ssh` offers `publickey` and nothing else
+for every account (`agi`, `ubuntu`, `root`). Host keys are unchanged since 27 Oct, so the unit
+was not reimaged; the key installed on 27 Oct is not on this Mac and no agent holds it. Password
+auth is refused now but was reportedly working on 2 Nov, so the config changed in between.
+Recovery is a local console action — see [access](access.md).
+
+`tools/luka-ssh.sh` was rewritten to use `SSH_ASKPASS` after `expect` hit *"no more ptys"* on
+this Mac and reported a false success. It now fails honestly (exit 255) with the server's own
+refusal.
+
+**11-03 — rope-assisted standing, `McAction_RL_JOINT_DEFAULT`.** Operator reports straight-leg
+standing with the rig taking weight. `GetAction` reports `RL_JOINT_DEFAULT / RUNNING`. Legs
+measured near-straight and symmetric: hip pitch −0.084, tarsus 0.253, toe pitch −0.168 rad
+(left/right within 2 mrad). Arms hanging: joint2 ±1.314 (75.3°), joint5 1.570 (90.0°), every
+other arm joint within 32 mrad of zero. Neck within 1 mrad of zero. Fingers 0–4 counts, i.e.
+open. Same mode family as the 10-28 observation, and still a mode that forbids arm commands.
+
+**11-03 — port inventory.** A bounded check of 16 candidates found only 22, 5000, 56322 and
+56444 open. Nothing on 9000 (Illeon, not installed) and no rosbridge on 9090 — so there is no
+existing ROS-to-browser bridge to lean on. Port 5000 is a **uvicorn** app: `/`, `/health` and
+`/openapi.json` all 404, so it is a route-specific service rather than a documented API. Not
+probed further: route guessing is not evidence.
+
+**11-03 — real payload shapes.** Neck and hands are nested, not flat, and the adapter now
+parses both. Captured shapes are fixtures in `gateway/test/physical.test.mjs`.
+
+
 ---
 
 # 6. Corrections and superseded conclusions
@@ -267,9 +357,10 @@ one arm slowly and watching, then applying the convention selector — not by in
 - **First-run auto-detection**: if `raw` crosses, try the alternatives and adopt the first that
   does not, logging *"geometric heuristic from one pose, not a calibration"*.
 
-This is a visualisation workaround. The real fix is Phase D calibration: put him in a known
-pose, capture reported angles, and derive per-joint sign and offset. Until then the twin's
-arm posture is approximately right at best, and the convention in force is shown in the UI.
+This is a visualisation workaround. **Resolved 2026-11-03:** calibration is now explicit and
+per-joint (`config/joint-calibration.json`), with legs absolute and arms/head relative to a
+captured pose. The convention selector remains only as a fallback when no calibration is loaded.
+See [calibration](calibration.md) for the rules, the file format and the remaining sign pass.
 
 ## Open questions
 
@@ -280,3 +371,7 @@ arm posture is approximately right at best, and the convention in force is shown
 4. Are the vendor's arm limits true for this unit? No measurement exists.
 5. Does publishing to the arm topic while the controller is active fight it, get ignored, or
    get rejected? **Untested, and not to be tested casually.**
+6. Is an SSH public key provisioned for `agi`, or is there a manufacturer-supported way to run
+   a process on the unit? The installed daemon refuses passwords, and nothing on the network
+   offers a ROS bridge (2026-11-03 port check). Until one of those changes, no robot-side code
+   can exist — which keeps the arm path blocked regardless of controller mode.

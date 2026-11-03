@@ -87,6 +87,22 @@
         <p id="linkNote" class="hint">Read-only <code>McActionService/GetAction</code> at 0.2 Hz.</p>
       </section>
 
+      <section class="card">
+        <h2>Joint calibration <span id="calState" class="tag">…</span></h2>
+        <p class="hint">The captured pose becomes the twin's neutral. Legs use absolute URDF angles; arms and head use offsets. If a joint moves the wrong way, flip its sign.</p>
+        <div class="btnrow">
+          <button id="btnCalCapture" class="btn small">capture current pose</button>
+          <button id="btnCalReset" class="btn small ghost">use shared</button>
+          <button id="btnCalDownload" class="btn small ghost">download</button>
+        </div>
+        <details id="calDetails">
+          <summary>joint offsets &amp; directions</summary>
+          <div id="calList" class="cal-list"></div>
+        </details>
+        <p id="calNote" class="hint"></p>
+        <div id="handReadout" class="handread"></div>
+      </section>
+
       <section class="card grow">
         <h2>Event log</h2>
         <div id="logList" class="log"></div>

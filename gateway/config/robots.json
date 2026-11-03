@@ -1,0 +1,106 @@
+{
+  "gateway": {
+    "telemetryHz": 10
+  },
+  "robots": [
+    {
+      "id": "luka-sim",
+      "label": "Luka simulator",
+      "adapter": "simulator",
+      "physical": false,
+      "configuration": "grounded",
+      "profile": {
+        "name": "simulator",
+        "label": "Simulator profile",
+        "suspension": "none",
+        "feet": "simulated floor",
+        "rig": "none",
+        "locomotion": "enabled in simulation",
+        "armControl": "simulation only",
+        "motionSchema": "n/a",
+        "controller": "none",
+        "locks": []
+      },
+      "notes": "Kinematic stand-in. Joint slew rates and posture keyframes are plausible shapes, not measurements of Luka. The grounded configuration exists so the full contract is exercisable here, and says nothing about the real robot.",
+      "lidar": {
+        "simulate": true,
+        "hz": 10,
+        "points": 2200
+      }
+    },
+    {
+      "id": "luka",
+      "label": "Luka (A2 Ultra)",
+      "adapter": "aimdk",
+      "physical": true,
+      "configuration": "suspended",
+      "profile": {
+        "name": "suspended-test",
+        "label": "Suspended test profile",
+        "suspension": "full weight",
+        "feet": "clear of floor",
+        "rig": "rated for full weight",
+        "locomotion": "locked",
+        "armControl": "simulation only",
+        "motionSchema": "unverified",
+        "controller": "AimMaster (preserved)",
+        "locks": [
+          {
+            "capability": "base.velocity",
+            "reason": "locomotion is locked by the suspended test profile: no walking requests reach any adapter"
+          },
+          {
+            "capability": "legs.posture",
+            "reason": "leg posture changes are locked while Luka is suspended; whether upper-body servo makes the legs passive is a hardware question, not an inference"
+          }
+        ]
+      },
+      "options": {
+        "host": "192.168.4.136",
+        "port": 56322,
+        "actionHz": 0.2,
+        "jointsHz": 5
+      },
+      "notes": "Read-only telemetry through McActionService and McDataService. Suspended: feet clear, full weight on the rig. Locomotion and leg-posture commands are locked in software; arm commands have no verified write path and are refused by the adapter.",
+      "lidar": {
+        "simulate": false,
+        "topic": "/aima/hal/lidar/neck/pointcloud",
+        "sensor": "Livox Mid-360",
+        "hz": 10,
+        "frame": "neck",
+        "note": "ROS 2 topic only; no bridge is reachable from the Wi-Fi interface, so no frames are expected until one exists."
+      }
+    },
+    {
+      "id": "luka-ros2",
+      "label": "Luka via ROS 2",
+      "adapter": "ros2",
+      "physical": true,
+      "configuration": "suspended",
+      "enabled": false,
+      "profile": {
+        "name": "suspended-test",
+        "label": "Suspended test profile",
+        "suspension": "full weight",
+        "feet": "clear of floor",
+        "rig": "rated for full weight",
+        "locomotion": "locked",
+        "armControl": "simulation only",
+        "motionSchema": "unverified",
+        "controller": "AimMaster (preserved)",
+        "locks": [
+          {
+            "capability": "base.velocity",
+            "reason": "locomotion is locked by the suspended test profile"
+          },
+          {
+            "capability": "legs.posture",
+            "reason": "leg posture changes are locked while Luka is suspended"
+          }
+        ]
+      },
+      "notes": "Blocked. Publishing /motion/control/arm_joint_command needs a process on the robot (domain 232, Fast DDS profile). Nothing is installed on Luka; this entry exists to make the gap visible rather than implied.",
+      "lidar": null
+    }
+  ]
+}

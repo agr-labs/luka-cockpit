@@ -1,0 +1,16 @@
+{
+  "name": "luka-cockpit",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser digital twin, read-only telemetry, and the Steadwell Robot Gateway",
+  "scripts": {
+    "start": "node serve.mjs",
+    "gateway": "node gateway/server.mjs",
+    "test": "node --test gateway/test/*.test.mjs",
+    "test:cockpit": "node tools/verify-fk.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

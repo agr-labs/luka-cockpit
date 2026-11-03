@@ -258,3 +258,45 @@ body[data-env="sim"] .btn:disabled { opacity: .22; }
 #profileState[data-mode="live"] { color: var(--teal); border-color: #17614f; }
 #profileState[data-mode="warn"] { color: var(--amber); border-color: #5a4718; }
 .posesrc { color: var(--amber); margin-top: 3px; }
+
+/* ------------------------------ calibration ------------------------------ */
+
+.card summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 6px;
+}
+.cal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 250px;
+  overflow: auto;
+  margin-top: 6px;
+}
+.cal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px 44px 24px 24px;
+  gap: 4px;
+  align-items: center;
+  padding: 1px 0;
+  border-bottom: 1px solid rgba(38, 45, 54, 0.5);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+.cal-row .n { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-row .v { text-align: right; }
+.cal-row button { min-height: 18px; padding: 0 4px; font-size: 10px; line-height: 1; }
+.cal-row button.neg { color: var(--bad); }
+
+.handread {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(38, 45, 54, 0.6);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.handread b { color: var(--text); font-weight: 500; }
