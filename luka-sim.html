@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Luka · Upper-Body Embodied Sim · Speech + Kameyoko + Trellis</title>
+  <link rel="stylesheet" href="./luka-sim.css" />
+</head>
+<body>
+  <div id="boot" class="boot">
+    <div class="boot-card">
+      <div class="boot-mark"></div>
+      <div class="boot-title">LUKA · A2 ULTRA UPPER-BODY SIM</div>
+      <div id="bootMsg" class="boot-msg">Initializing studio renderer…</div>
+      <div class="boot-bar"><i id="bootBar"></i></div>
+      <div class="boot-hint">Live AgiBot upper-body skin · Black OLED head · Speech · Kameyoko tracking · Trellis memory</div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <div>
+        <strong>LUKA <span class="accent">UPPER-BODY SIM</span></strong>
+        <small>AGIBOT A2 ULTRA · SPEECH · KAMEYOKO VISION · TRELLIS CONTEXT</small>
+      </div>
+    </div>
+
+    <div class="top-pills">
+      <span class="pill"><i id="speechDot" class="dot"></i><span id="speechPill">SPEECH …</span></span>
+      <span class="pill"><i id="visionDot" class="dot"></i><span id="visionPill">VISION OFF</span></span>
+      <span class="pill"><i class="dot on-cyan"></i><span id="trellisPill">TRELLIS 0</span></span>
+      <span class="sep"></span>
+      <span id="rendererChip" class="chip">…</span>
+      <span id="fpsChip" class="chip">– fps</span>
+      <a href="./index.html" class="nav-link" title="Open Full Telemetry Cockpit">Full Cockpit ↗</a>
+    </div>
+  </header>
+
+  <main class="studio-grid">
+    <!-- LEFT RAIL: CONVERSATION & SPEECH -->
+    <aside class="rail left">
+      <section class="card talk-card">
+        <div class="card-head">
+          <h2>Speak with Luka</h2>
+          <span id="phaseBadge" class="badge" data-phase="idle">IDLE</span>
+        </div>
+
+        <div class="talk-stage">
+          <button id="talkBtn" class="talk-btn" type="button" data-phase="idle">
+            <span class="talk-ring"></span>
+            <span class="talk-icon">🎙</span>
+            <span id="talkLabel" class="talk-label">Hold to Talk</span>
+            <span id="talkSub" class="talk-sub">or hold Space · click to toggle</span>
+          </button>
+          <div class="level-wrap">
+            <div class="level-bar"><i id="micLevelFill"></i></div>
+            <span id="holdTimer" class="mono tiny muted"></span>
+          </div>
+        </div>
+
+        <form id="textForm" class="text-form">
+          <input id="textInput" type="text" placeholder="Type to Luka… e.g. 'Wave hello' or 'Remember Maya lives in Austin'" autocomplete="off" />
+          <button id="sendBtn" type="submit" class="btn primary">Send</button>
+        </form>
+
+        <div class="quick-prompts">
+          <button type="button" class="chip-btn" data-prompt="Hey Luka, wave hello and introduce yourself!">Wave &amp; Greet</button>
+          <button type="button" class="chip-btn" data-prompt="Inspect your hands and wiggle your fingers.">Inspect Hands</button>
+          <button type="button" class="chip-btn" data-prompt="Remember that Maya works at Steadwell and is based in Austin.">Anchor Memory</button>
+          <button type="button" class="chip-btn" data-prompt="What do you remember about Maya and Steadwell?">Recall Trellis</button>
+        </div>
+
+        <div class="voice-controls">
+          <div class="vc-row">
+            <label for="llmSelect">Brain</label>
+            <select id="llmSelect"></select>
+          </div>
+          <div class="vc-row">
+            <label for="voiceSelect">Voice</label>
+            <select id="voiceSelect"></select>
+          </div>
+          <div class="vc-row inline-checks">
+            <label class="toggle"><input type="checkbox" id="audioOutCheck" checked /> Speak aloud</label>
+            <button id="replayBtn" type="button" class="btn ghost xs" disabled>Replay</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card grow transcript-card">
+        <div class="card-head">
+          <h2>Conversation &amp; Directives</h2>
+          <span id="turnCounter" class="mono tiny muted">0 turns</span>
+        </div>
+        <div id="transcriptList" class="transcript-list">
+          <div class="msg system">
+            Luka's upper body, glossy black OLED head, speech pipeline, Kameyoko tracker, and Trellis memory graph are online. Hold Space or type below to talk.
+          </div>
+        </div>
+      </section>
+
+      <section class="card gestures-card">
+        <div class="card-head">
+          <h2>Upper-Body Gestures</h2>
+          <span id="gestureNow" class="mono tiny accent">autonomous</span>
+        </div>
+        <div class="gesture-grid" id="gestureButtons"></div>
+      </section>
+    </aside>
+
+    <!-- CENTER STAGE: 3D LUKA UPPER-BODY VIEWPORT -->
+    <section class="viewport">
+      <canvas id="stageCanvas"></canvas>
+
+      <div class="hud tl">
+        <div class="hud-title">LUKA <span class="muted">· AGIBOT A2 ULTRA</span></div>
+        <div id="hudSub" class="hud-sub">Black OLED visor · Pearl-white &amp; gunmetal chassis</div>
+        <div class="hud-tags">
+          <span id="hudModeTag" class="hud-tag">IDLE</span>
+          <span id="hudGestureTag" class="hud-tag subtle">BREATHING</span>
+          <span id="hudTrackTag" class="hud-tag emerald" hidden>KAMEYOKO MIRROR</span>
+        </div>
+      </div>
+
+      <div class="hud tr camera-bar">
+        <button type="button" class="cam-btn active" data-cam="front">Front</button>
+        <button type="button" class="cam-btn" data-cam="threeQuarterL">3/4 L</button>
+        <button type="button" class="cam-btn" data-cam="threeQuarterR">3/4 R</button>
+        <button type="button" class="cam-btn" data-cam="closeup">Head &amp; Hands</button>
+        <button type="button" id="cursorGazeBtn" class="cam-btn" title="Make Luka smoothly turn his head laterally and up/down to follow your cursor">Look at Cursor</button>
+        <button type="button" id="toggleBodyBtn" class="cam-btn" title="Toggle lower-body legs">Upper Only</button>
+      </div>
+
+      <div id="subtitleBox" class="subtitle-box" hidden>
+        <span class="sub-speaker">LUKA</span>
+        <span id="subtitleText"></span>
+      </div>
+
+      <!-- KAMEYOKO LIVE VISION PIP -->
+      <div id="visionPip" class="vision-pip" hidden>
+        <div class="pip-head">
+          <span class="pip-dot"></span>
+          <span id="pipTitle">KAMEYOKO TRACKER</span>
+          <span id="pipGesture" class="mono">NEUTRAL</span>
+        </div>
+        <div class="pip-frame">
+          <video id="camVideo" playsinline muted></video>
+          <canvas id="camOverlay"></canvas>
+        </div>
+      </div>
+
+      <div class="hud bl stats-strip">
+        <div><span>HEAD YAW</span><b id="readHeadYaw">0°</b></div>
+        <div><span>HEAD PITCH</span><b id="readHeadPitch">0°</b></div>
+        <div><span>L ELBOW</span><b id="readLElbow">0°</b></div>
+        <div><span>R ELBOW</span><b id="readRElbow">0°</b></div>
+        <div><span>SPEECH RMS</span><b id="readRms">0%</b></div>
+      </div>
+
+      <div class="hud br keys-hint">
+        <span>Drag / Scroll: Orbit &amp; Zoom</span>
+        <span><kbd>Space</kbd> Hold to Talk</span>
+      </div>
+    </section>
+
+    <!-- RIGHT RAIL: TABBED INSPECTOR (KAMEYOKO · TRELLIS · EMERGENT & JOINTS) -->
+    <aside class="rail right">
+      <nav class="tab-bar" role="tablist">
+        <button type="button" class="tab active" data-tab="vision">Kameyoko</button>
+        <button type="button" class="tab" data-tab="trellis">Trellis</button>
+        <button type="button" class="tab" data-tab="skills">Skills &amp; DOF</button>
+      </nav>
+
+      <!-- TAB 1: KAMEYOKO VISION TRACKING -->
+      <div class="tab-pane active" data-pane="vision">
+        <section class="card">
+          <div class="card-head">
+            <h2>Head, Arm &amp; Hand Tracking</h2>
+            <span id="trackerBadge" class="badge">OFF</span>
+          </div>
+          <p class="hint">
+            Kameyoko MediaPipe Pose (33-pt 3D) + Hand (2×21-pt) tracking with One Euro filtering. Drive Luka's head gaze or mirror both 7-DOF arms and all 10 fingers live.
+          </p>
+          <div class="btn-row">
+            <button id="btnCamStart" type="button" class="btn primary">Start Camera</button>
+            <button id="btnDemoStart" type="button" class="btn">Demo Skeleton</button>
+            <button id="btnTrackStop" type="button" class="btn ghost">Stop</button>
+          </div>
+
+          <div class="segmented" role="group" aria-label="Tracking retarget mode">
+            <button type="button" class="seg-btn active" data-track-mode="mirror">Full Mirror (Head+Arms+Hands)</button>
+            <button type="button" class="seg-btn" data-track-mode="gaze">Gaze Follow Only</button>
+          </div>
+
+          <div class="vc-row inline-checks">
+            <label class="toggle"><input type="checkbox" id="mirrorSidesCheck" checked /> Mirror left/right</label>
+            <button id="btnLogObs" type="button" class="btn ghost xs">Log Pose → Trellis</button>
+          </div>
+          <div id="trackerStatus" class="status-note">Tracker idle · click Start Camera or Demo Skeleton</div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Head Pan &amp; Tilt Gimbal</h2>
+            <span id="headPadReadout" class="mono tiny accent">0° · 0°</span>
+          </div>
+          <div id="headPad" class="head-pad" role="application" aria-label="2D Head Pan and Tilt Control">
+            <span class="hp-axis hp-top">UP +35°</span>
+            <span class="hp-axis hp-bot">DOWN -33°</span>
+            <span class="hp-axis hp-left">← -75°</span>
+            <span class="hp-axis hp-right">+75° →</span>
+            <div class="hp-cross-h"></div>
+            <div class="hp-cross-v"></div>
+            <div id="headTargetDot" class="hp-dot target" hidden></div>
+            <div id="headLiveDot" class="hp-dot live"></div>
+          </div>
+          <div class="head-quick-row">
+            <button type="button" class="chip-btn" data-head-preset="-55,0">← Left</button>
+            <button type="button" class="chip-btn" data-head-preset="0,28">↑ Up</button>
+            <button type="button" class="chip-btn" data-head-preset="0,0">Center</button>
+            <button type="button" class="chip-btn" data-head-preset="0,-28">↓ Down</button>
+            <button type="button" class="chip-btn" data-head-preset="55,0">Right →</button>
+          </div>
+          <div class="head-quick-row">
+            <button type="button" class="chip-btn" data-head-gesture="nod">Nod</button>
+            <button type="button" class="chip-btn" data-head-gesture="shake_no">Shake No</button>
+            <button type="button" class="chip-btn" data-head-gesture="look_around">Scan Room</button>
+            <button type="button" id="btnHeadAuto" class="chip-btn accent-chip">Auto Gaze</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Live Tracked Kinematics</h2>
+            <span id="detectedGestureChip" class="chip emerald">Neutral</span>
+          </div>
+          <div class="meter-grid">
+            <div class="m-row"><span>Left Hand Open</span><div class="m-bar"><i id="openBarL"></i></div><b id="openValL">–</b></div>
+            <div class="m-row"><span>Right Hand Open</span><div class="m-bar"><i id="openBarR"></i></div><b id="openValR">–</b></div>
+            <div class="m-row"><span>Hands Detected</span><div class="m-bar"><i id="handsBar"></i></div><b id="handsVal">0 / 2</b></div>
+          </div>
+          <div class="finger-bars" id="fingerBars">
+            <div class="f-hand" data-side="left">
+              <span class="f-label">L RH56</span>
+              <div class="f-cols">
+                <div class="f-col"><div class="f-track"><i data-finger="left:thumb"></i></div><span>T</span></div>
+                <div class="f-col"><div class="f-track"><i data-finger="left:index"></i></div><span>I</span></div>
+                <div class="f-col"><div class="f-track"><i data-finger="left:middle"></i></div><span>M</span></div>
+                <div class="f-col"><div class="f-track"><i data-finger="left:ring"></i></div><span>R</span></div>
+                <div class="f-col"><div class="f-track"><i data-finger="left:pinky"></i></div><span>P</span></div>
+              </div>
+            </div>
+            <div class="f-hand" data-side="right">
+              <span class="f-label">R RH56</span>
+              <div class="f-cols">
+                <div class="f-col"><div class="f-track"><i data-finger="right:thumb"></i></div><span>T</span></div>
+                <div class="f-col"><div class="f-track"><i data-finger="right:index"></i></div><span>I</span></div>
+                <div class="f-col"><div class="f-track"><i data-finger="right:middle"></i></div><span>M</span></div>
+                <div class="f-col"><div class="f-track"><i data-finger="right:ring"></i></div><span>R</span></div>
+                <div class="f-col"><div class="f-track"><i data-finger="right:pinky"></i></div><span>P</span></div>
+              </div>
+            </div>
+          </div>
+          <div id="trackTelemetry" class="kv-grid"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Hand Smoothing &amp; Calibration</h2>
+            <span id="calStatusBadge" class="mono tiny accent">CALIBRATED</span>
+          </div>
+          <div class="cal-sliders">
+            <label class="slider-row compact">
+              <span>Anti-Jitter</span>
+              <input id="calSmooth" type="range" min="0" max="100" step="2" value="68" />
+              <output id="calSmoothOut">68%</output>
+            </label>
+            <label class="slider-row compact">
+              <span>Reach Depth</span>
+              <input id="calReach" type="range" min="75" max="140" step="1" value="112" />
+              <output id="calReachOut">1.12×</output>
+            </label>
+            <label class="slider-row compact">
+              <span>Height Trim</span>
+              <input id="calHeight" type="range" min="-20" max="20" step="1" value="0" />
+              <output id="calHeightOut">0°</output>
+            </label>
+            <label class="slider-row compact">
+              <span>Wrist Roll</span>
+              <input id="calWrist" type="range" min="-45" max="45" step="1" value="0" />
+              <output id="calWristOut">0°</output>
+            </label>
+          </div>
+          <div class="btn-row">
+            <button id="btnCalOpenHands" type="button" class="btn xs" title="Hold hands open in front of camera and click to zero residual curl">Calibrate Open Hands</button>
+            <button id="btnCalReset" type="button" class="btn ghost xs">Reset</button>
+          </div>
+          <div class="head-quick-row">
+            <button type="button" class="chip-btn" data-hand-preset="open">Open</button>
+            <button type="button" class="chip-btn" data-hand-preset="peace">Peace</button>
+            <button type="button" class="chip-btn" data-hand-preset="point">Point</button>
+            <button type="button" class="chip-btn" data-hand-preset="pinch">Pinch</button>
+            <button type="button" class="chip-btn" data-hand-preset="thumbs_up">Thumb↑</button>
+            <button type="button" class="chip-btn" data-hand-preset="fist">Fist</button>
+            <button type="button" id="btnHandAuto" class="chip-btn accent-chip">Auto</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Teach Pose from Tracking</h2>
+            <span class="mono tiny muted">EMERGENT</span>
+          </div>
+          <p class="hint">Strike a pose in front of the camera (or adjust sliders), then capture it as a voice-triggered Emergent Skill in Trellis.</p>
+          <div class="btn-row">
+            <button id="btnQuickTeach" type="button" class="btn accent-btn">Capture Current Pose as Skill →</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- TAB 2: TRELLIS UNBOUNDED CONTEXT -->
+      <div class="tab-pane" data-pane="trellis">
+        <section class="card">
+          <div class="card-head">
+            <h2>TVP-1 Context Viewport</h2>
+            <span id="trellisBudgetLabel" class="mono tiny accent">0 / 1600 tok</span>
+          </div>
+          <div class="budget-bar"><i id="trellisBudgetFill"></i></div>
+          <div class="tier-grid">
+            <div class="tier"><span>HOT WM</span><b id="tierHot">0</b></div>
+            <div class="tier"><span>WARM VP</span><b id="tierWarm">0</b></div>
+            <div class="tier"><span>COOL GRAPH</span><b id="tierCool">0</b></div>
+            <div class="tier"><span>COLD WAL</span><b id="tierCold">0</b></div>
+          </div>
+          <div class="kv-inline">
+            <span>KV Reuse: <b id="kvHitRate">0%</b></span>
+            <span>Saved: <b id="kvSavedMs">0 ms</b></span>
+            <span class="mono tiny muted" id="ticFingerprint">TIC-1 —</span>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Semantic Graph &amp; Memory</h2>
+            <span id="entityCount" class="mono tiny muted">0 nodes</span>
+          </div>
+          <form id="addMemoryForm" class="text-form compact">
+            <input id="memoryInput" type="text" placeholder="Anchor fact… e.g. 'Alex works at NASA in Houston'" />
+            <button type="submit" class="btn xs">Anchor</button>
+          </form>
+          <div id="entityList" class="scroll-list short"></div>
+        </section>
+
+        <section class="card grow">
+          <div class="card-head">
+            <h2>TRP-1 Immutable WAL</h2>
+            <span id="commitCount" class="mono tiny muted">0 commits</span>
+          </div>
+          <div id="walList" class="scroll-list"></div>
+        </section>
+      </div>
+
+      <!-- TAB 3: EMERGENT CAPABILITIES & MANUAL UPPER-BODY DOF -->
+      <div class="tab-pane" data-pane="skills">
+        <section class="card">
+          <div class="card-head">
+            <h2>Teach Emergent Skill</h2>
+            <span class="badge emergent">STUDIO</span>
+          </div>
+          <form id="teachSkillForm" class="teach-form">
+            <div class="two-col">
+              <input id="skillNameInput" type="text" placeholder="Skill name (e.g. high_five)" required />
+              <input id="skillTriggerInput" type="text" placeholder="Voice trigger (e.g. high five)" />
+            </div>
+            <input id="skillDescInput" type="text" placeholder="What Luka does when triggered…" />
+            <button type="submit" class="btn primary full">Capture Live Upper-Body Pose &amp; Merge to Trellis</button>
+          </form>
+        </section>
+
+        <section id="candidatesCard" class="card" hidden>
+          <div class="card-head">
+            <h2>Emergent Candidates</h2>
+            <span class="badge emergent">DISCOVERED</span>
+          </div>
+          <div id="candidatesList" class="skill-list"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Active Embodied Skills</h2>
+            <span id="skillCount" class="mono tiny muted">0</span>
+          </div>
+          <div id="skillsList" class="scroll-list short"></div>
+        </section>
+
+        <section class="card grow">
+          <div class="card-head">
+            <h2>Upper-Body Joints (16 DOF)</h2>
+            <button id="btnReleaseManual" type="button" class="btn ghost xs">Release Manual</button>
+          </div>
+          <div id="jointSliders" class="scroll-list sliders"></div>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="./src/luka-sim.js"></script>
+</body>
+</html>

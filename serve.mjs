@@ -9,6 +9,7 @@ import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { handleSimApi } from './src/sim-api.mjs';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -49,6 +50,7 @@ let inFlight = false;
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
@@ -57,6 +59,7 @@ const MIME = {
   '.bin': 'application/octet-stream',
   '.a2rec': 'application/octet-stream',
   '.stl': 'model/stl',
+  '.wasm': 'application/wasm',
   '.md': 'text/markdown; charset=utf-8',
 };
 
@@ -89,6 +92,10 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204).end(); return; }
 
   const url = new URL(req.url, `http://${req.headers.host}`);
+
+  // Interactive Upper-Body Sim API (speech ASR/LLM/TTS, Trellis store, MediaPipe runtime).
+  // Strictly isolated from physical robot RPCs below.
+  if (await handleSimApi(req, res, url)) return;
 
   if (url.pathname === '/api/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -251,6 +258,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`\n  Steadwell cockpit  →  http://${HOST}:${PORT}/`);
+  console.log(`  Luka upper-body sim→  http://${HOST}:${PORT}/luka-sim.html`);
   console.log(`  robot proxy        →  http://${ROBOT_HOST}:${ROBOT_PORT} (read-only: GetAction, GetJointState)`);
   console.log(`  joint telemetry    →  ${JOINT_HZ > 0 ? JOINT_HZ + ' Hz' : 'disabled'}`);
   console.log(`  add ?renderer=webgl to force the WebGL2 path\n`);

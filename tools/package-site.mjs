@@ -17,6 +17,8 @@ const DIST = join(ROOT, 'dist');
 const FILES = [
   'index.html',
   'styles.css',
+  'luka-sim.html',
+  'luka-sim.css',
   'README.md',
 ];
 const DIRS = [
@@ -31,6 +33,7 @@ const MODEL_DOCS = [
   'model/BUILD_REPORT.md',
   'model/LICENSE-MulanPSL2',
   'model/measurements.csv',
+  'model/meshes/logo.stl',
 ];
 
 const PAGES_MAX_BYTES = 25 * 1024 * 1024;
