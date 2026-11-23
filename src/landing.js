@@ -7,6 +7,7 @@
 //   - Keyboard quick-launch shortcuts (1..8)
 
 import { createMetricsClient } from './metrics.js';
+import { FLEET_BOTS, VAULTBOTS_URL } from './fleet.js';
 
 document.documentElement.classList.add('js');
 
@@ -354,8 +355,122 @@ function initKeyboardShortcuts() {
   });
 }
 
+/* ------------------------------------- 7. Fleet Switcher & Mobile Menu */
+
+function initNavigationAndFleet() {
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // Populate robot switcher dropdown from FLEET_BOTS manifest
+  const switcherList = document.getElementById('botSwitcherList');
+  if (switcherList) {
+    switcherList.innerHTML = FLEET_BOTS.map((bot, i) => `
+      <a href="${esc(bot.primaryApp.href)}" class="switcher-item ${i === 0 ? 'active' : ''}" data-track-link="Switcher: ${esc(bot.name)}">
+        <span>
+          <strong>${esc(bot.name)}</strong>
+          <small>${esc(bot.category)} · ${esc(bot.version)}</small>
+        </span>
+        <span class="status-tag" data-status="${bot.status === 'live' ? 'online' : 'standby'}"><i></i><span>${bot.status === 'live' ? 'LIVE' : 'SOON'}</span></span>
+      </a>
+    `).join('');
+  }
+
+  // Toggle fleet switcher dropdown cleanly
+  const swBtn = document.getElementById('botSwitcherBtn');
+  const swMenu = document.getElementById('botSwitcherMenu');
+  if (swBtn && swMenu) {
+    const closeSw = () => {
+      swMenu.hidden = true;
+      swBtn.setAttribute('aria-expanded', 'false');
+    };
+    swBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const next = swMenu.hidden;
+      swMenu.hidden = !next;
+      swBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
+    });
+    document.addEventListener('click', (e) => {
+      if (!swMenu.hidden && !swMenu.contains(e.target) && e.target !== swBtn) closeSw();
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeSw();
+    });
+  }
+
+  // Mobile responsive menu drawer
+  const menuBtn = document.getElementById('menuToggle');
+  const mobileNav = document.getElementById('mobileNav');
+  if (menuBtn && mobileNav) {
+    const closeMenu = () => {
+      mobileNav.hidden = true;
+      menuBtn.setAttribute('aria-expanded', 'false');
+    };
+    menuBtn.addEventListener('click', () => {
+      const next = mobileNav.hidden;
+      mobileNav.hidden = !next;
+      menuBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
+    });
+    mobileNav.querySelectorAll('[data-mobile-close], a').forEach((a) => {
+      a.addEventListener('click', closeMenu);
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeMenu();
+    });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 820 && !mobileNav.hidden) closeMenu();
+    });
+  }
+
+  // Keep fleet grid synced with FLEET_BOTS as more bots are added
+  const fleetGrid = document.getElementById('fleetGrid');
+  if (fleetGrid && FLEET_BOTS.length) {
+    const botCards = FLEET_BOTS.map((bot, i) => `
+      <article class="fleet-card ${bot.status === 'live' ? 'active-bot' : ''} reveal-card is-shown" style="--card-i:${i}">
+        <div class="card-top">
+          <div class="card-id">
+            <span class="card-num">${esc(bot.category.toUpperCase())} · ${esc(bot.version)}</span>
+          </div>
+          <span class="status-tag" data-status="${bot.status === 'live' ? 'online' : 'standby'}"><i></i><span>${bot.status === 'live' ? 'LIVE NOW' : 'COMING SOON'}</span></span>
+        </div>
+        <div class="card-body">
+          <h3>${esc(bot.name)}</h3>
+          <p>${esc(bot.summary)}</p>
+        </div>
+        <div class="fleet-actions">
+          <a href="${esc(bot.primaryApp.href)}" class="btn btn-primary btn-compact" data-track-link="Fleet Card: ${esc(bot.name)}">${esc(bot.primaryApp.label)} →</a>
+          <a href="${esc(bot.purchaseUrl || VAULTBOTS_URL)}" target="_blank" rel="noopener" class="btn btn-compact" data-track-link="vaultbots.com">Buy at VaultBots ↗</a>
+        </div>
+      </article>
+    `).join('');
+
+    const expansionCard = `
+      <article class="fleet-card upcoming-bot reveal-card is-shown" style="--card-i:${FLEET_BOTS.length}">
+        <div class="card-top">
+          <div class="card-id">
+            <span class="card-num">FLEET EXPANSION</span>
+          </div>
+          <span class="status-tag"><i></i><span>COMING SOON</span></span>
+        </div>
+        <div class="card-body">
+          <h3>More Robots Arriving Soon</h3>
+          <p>
+            This hub is built for our expanding fleet of embodied robots — each with its own live simulator,
+            voice studio, and direct availability through VaultBots.
+          </p>
+        </div>
+        <div class="fleet-actions">
+          <a href="${esc(VAULTBOTS_URL)}" target="_blank" rel="noopener" class="btn btn-cyan btn-compact" data-track-link="vaultbots.com">
+            Explore &amp; Purchase on vaultbots.com ↗
+          </a>
+        </div>
+      </article>
+    `;
+    fleetGrid.innerHTML = botCards + expansionCard;
+  }
+}
+
 /* -------------------------------------------------------------- Boot */
 
+initNavigationAndFleet();
 initWordReveals();
 initCardReveals();
 initCardSpotlights();

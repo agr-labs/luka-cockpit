@@ -16,30 +16,73 @@
   <div class="page-shell">
     <header class="topbar">
       <div class="wrap topbar-inner">
-        <a class="brand" href="./" aria-label="Steadwell Luka Home">
-          <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
-          <span class="brand-text">
-            <strong>STEADWELL</strong>
-            <small>LUKA · v. A2U</small>
-          </span>
-        </a>
+        <div class="brand-cluster">
+          <a class="brand" href="./" aria-label="Steadwell Robotics Home">
+            <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+            <span class="brand-text">
+              <strong>STEADWELL</strong>
+              <small>ROBOTICS HUB</small>
+            </span>
+          </a>
 
-        <nav class="nav-links" aria-label="Sections">
-          <a href="#try-luka">Try Luka</a>
-          <a href="#own-luka">Purchase</a>
-          <a href="#operations">On-Site Tools</a>
+          <div class="bot-switcher" id="botSwitcher">
+            <button type="button" class="bot-switcher-btn" id="botSwitcherBtn" aria-expanded="false" aria-controls="botSwitcherMenu" aria-label="Switch robot">
+              <i class="pulse-dot" data-state="online"></i>
+              <span>Luka · v. A2U</span>
+              <span class="switcher-caret" aria-hidden="true">▾</span>
+            </button>
+            <div class="bot-switcher-menu" id="botSwitcherMenu" hidden>
+              <div class="switcher-head">ROBOT FLEET</div>
+              <div id="botSwitcherList"></div>
+              <a href="https://vaultbots.com" target="_blank" rel="noopener" class="switcher-footer" data-track-link="vaultbots.com">
+                <span>Browse &amp; purchase on VaultBots</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+          <a href="#fleet">Fleet</a>
+          <a href="#studios">Studios</a>
           <a href="./analytics.html">Analytics</a>
-          <a href="https://vaultbots.com" target="_blank" rel="noopener" class="nav-buy" data-track-link="vaultbots.com">VaultBots ↗</a>
         </nav>
 
         <div class="top-right">
-          <span class="suite-pill" title="Live app readiness">
-            <i id="suiteStatusDot" class="pulse-dot" data-state="sim"></i>
-            <span id="suiteStatusText">READY IN BROWSER</span>
-          </span>
-          <a href="./luka-sim.html" class="btn btn-primary btn-compact" data-track-link="Talk & Mirror Studio (Header)">
-            Try Luka <span class="arrow" aria-hidden="true">→</span>
+          <a href="https://vaultbots.com" target="_blank" rel="noopener" class="nav-ext" data-track-link="vaultbots.com">
+            Buy Luka <span aria-hidden="true">↗</span>
           </a>
+          <a href="./luka-sim.html" class="btn btn-primary btn-compact" data-track-link="Talk & Mirror Studio (Header)">
+            Launch <span class="arrow" aria-hidden="true">→</span>
+          </a>
+          <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mobileNav" aria-label="Open menu">
+            <span></span><span></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile & Tablet Responsive Drawer -->
+      <div class="mobile-nav" id="mobileNav" hidden>
+        <div class="wrap mobile-nav-inner">
+          <div class="mobile-nav-group">
+            <span class="mobile-nav-label">Navigate</span>
+            <a href="#fleet" data-mobile-close>Fleet Roster</a>
+            <a href="#studios" data-mobile-close>Interactive Studios</a>
+            <a href="#operations" data-mobile-close>On-Site Tools</a>
+            <a href="./analytics.html">Analytics</a>
+          </div>
+          <div class="mobile-nav-group">
+            <span class="mobile-nav-label">Active Robot · Luka v. A2U</span>
+            <a href="./luka-sim.html" class="btn btn-primary" data-track-link="Talk & Mirror Studio (Mobile)">
+              Talk &amp; Mirror Studio <span aria-hidden="true">→</span>
+            </a>
+            <a href="./cockpit.html" class="btn" data-track-link="Full-Body 3D Explorer (Mobile)">
+              Full-Body 3D Explorer <span aria-hidden="true">↗</span>
+            </a>
+            <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn btn-cyan" data-track-link="vaultbots.com">
+              Purchase Luka on VaultBots <span aria-hidden="true">↗</span>
+            </a>
+          </div>
         </div>
       </div>
     </header>
@@ -49,14 +92,19 @@
       <section class="hero" id="heroSection" data-animation-active="true">
         <div class="wrap hero-grid">
           <div>
-            <div class="eyebrow"><i></i>LUKA · v. A2U</div>
+            <div class="eyebrow">
+              <i id="suiteStatusDot" class="pulse-dot" data-state="sim"></i>
+              <span>LUKA · v. A2U</span>
+              <span class="eyebrow-sep">·</span>
+              <span id="suiteStatusText">LIVE IN BROWSER</span>
+            </div>
             <h1 class="hero-title word-reveal" data-word-reveal>
               Meet Luka.<br />
               <span class="muted-line">Talk, move, and explore live.</span>
             </h1>
             <p class="hero-sub">
-              Experience Luka right in your browser — speak with him, mirror your hand and arm movements
-              using your webcam, or explore his full-body 3D motion. No setup required.
+              Try Luka right in your browser — speak with him, mirror your hand and arm movements
+              using your webcam, or inspect his full-body 3D motion. No setup required.
             </p>
             <div class="hero-actions">
               <a href="./luka-sim.html" class="btn btn-primary" data-track-link="Talk & Mirror Studio (Hero)">
@@ -64,9 +112,6 @@
               </a>
               <a href="./cockpit.html" class="btn" data-track-link="Full-Body 3D Explorer (Hero)">
                 Full-Body Explorer <span class="arrow" aria-hidden="true">↗</span>
-              </a>
-              <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn" data-track-link="vaultbots.com">
-                Buy Luka at VaultBots <span class="arrow" aria-hidden="true">↗</span>
               </a>
             </div>
             <div class="hero-metrics">
@@ -80,7 +125,7 @@
               </div>
               <div class="metric">
                 <b>Safe by Design</b>
-                <span>Real hardware motion limits</span>
+                <span>Built-in hardware limits</span>
               </div>
             </div>
           </div>
@@ -113,17 +158,17 @@
         </div>
       </section>
 
-      <!-- SECTION 01: START HERE (WORKS IN ANY BROWSER) -->
-      <section class="section-band apps-section" id="try-luka">
+      <!-- SECTION 01: INTERACTIVE STUDIOS FOR ACTIVE BOT -->
+      <section class="section-band apps-section" id="studios">
         <span class="corner-mark tl" aria-hidden="true"></span>
         <span class="corner-mark tr" aria-hidden="true"></span>
         <div class="wrap">
           <div class="section-head">
             <div>
-              <span class="section-index">01 · START HERE · WORKS IN ANY BROWSER</span>
-              <h2>Try Luka Live</h2>
+              <span class="section-index">01 · LUKA v. A2U · WORKS IN ANY BROWSER</span>
+              <h2>Interactive Studios</h2>
             </div>
-            <p class="section-note">Pick either interactive studio below — no downloads, accounts, or robot hardware needed.</p>
+            <p class="section-note">Choose an experience below — no downloads, accounts, or physical robot required.</p>
           </div>
 
           <div class="featured-grid">
@@ -138,7 +183,7 @@
                       <path d="M8 20v-3a4 4 0 0 1 8 0v3" />
                     </svg>
                   </span>
-                  <span class="card-num">01 · RECOMMENDED</span>
+                  <span class="card-num">01 · START HERE</span>
                 </div>
                 <span class="status-tag" data-status="ready"><i></i><span>READY</span></span>
               </div>
@@ -146,7 +191,7 @@
               <div class="card-body">
                 <h3>Talk &amp; Mirror Studio</h3>
                 <p>
-                  Have a real-time conversation with Luka, try expressive hand and head gestures, teach new poses,
+                  Have a live conversation with Luka, try expressive hand and head gestures, teach new poses,
                   or turn on your webcam so his arms and fingers mirror yours smoothly.
                 </p>
                 <div class="tag-row">
@@ -158,7 +203,7 @@
               </div>
 
               <div class="card-foot">
-                <span>Best place to start</span>
+                <span>Recommended first experience</span>
                 <span class="card-launch">Start Studio <span class="arrow" aria-hidden="true">↗</span></span>
               </div>
             </a>
@@ -203,30 +248,63 @@
         </div>
       </section>
 
-      <!-- PURCHASE BAND: VAULTBOTS.COM -->
-      <section class="section-band purchase-band" id="own-luka">
+      <!-- SECTION 02: ROBOT FLEET & VAULTBOTS PURCHASE -->
+      <section class="section-band apps-section" id="fleet">
         <span class="corner-mark tl" aria-hidden="true"></span>
         <span class="corner-mark tr" aria-hidden="true"></span>
         <div class="wrap">
-          <div class="purchase-card">
-            <div class="purchase-copy">
-              <span class="section-index">OWN LUKA · VAULTBOTS</span>
-              <h2>Interested in purchasing Luka for your team or space?</h2>
-              <p>
-                Explore availability, configurations, and hands-on deployment support for Luka v. A2U directly through
-                our storefront at VaultBots.
-              </p>
+          <div class="section-head">
+            <div>
+              <span class="section-index">02 · ROBOT FLEET &amp; AVAILABILITY</span>
+              <h2>Our Growing Lineup</h2>
             </div>
-            <div class="purchase-actions">
-              <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn btn-primary" data-track-link="vaultbots.com">
-                Visit vaultbots.com <span class="arrow" aria-hidden="true">↗</span>
-              </a>
-            </div>
+            <p class="section-note">New robots are joining the hub soon. Visit VaultBots to own Luka or reserve upcoming models.</p>
+          </div>
+
+          <div class="fleet-grid" id="fleetGrid">
+            <!-- Rendered from src/fleet.js + static fallback for no-JS -->
+            <article class="fleet-card active-bot reveal-card" style="--card-i:0">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-num">HUMANOID · v. A2U</span>
+                </div>
+                <span class="status-tag" data-status="online"><i></i><span>LIVE NOW</span></span>
+              </div>
+              <div class="card-body">
+                <h3>Luka</h3>
+                <p>Voice conversation, webcam hand &amp; arm mirroring, and full-body 3D motion explorer.</p>
+              </div>
+              <div class="fleet-actions">
+                <a href="./luka-sim.html" class="btn btn-primary btn-compact" data-track-link="Fleet Card: Luka Studio">Open Studio →</a>
+                <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn btn-compact" data-track-link="vaultbots.com">Buy at VaultBots ↗</a>
+              </div>
+            </article>
+
+            <article class="fleet-card upcoming-bot reveal-card" style="--card-i:1">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-num">FLEET EXPANSION</span>
+                </div>
+                <span class="status-tag"><i></i><span>COMING SOON</span></span>
+              </div>
+              <div class="card-body">
+                <h3>More Robots Arriving Soon</h3>
+                <p>
+                  This hub is built for our expanding fleet of embodied robots — each with its own live simulator,
+                  voice studio, and direct availability through VaultBots.
+                </p>
+              </div>
+              <div class="fleet-actions">
+                <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn btn-cyan btn-compact" data-track-link="vaultbots.com">
+                  Explore &amp; Purchase on vaultbots.com ↗
+                </a>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <!-- SECTION 02: ON-SITE ROBOT TOOLS (OPEN LOCALLY, COLLAPSED BY DEFAULT ON PUBLIC WEB) -->
+      <!-- SECTION 03: ON-SITE ROBOT TOOLS (EXPANDED LOCALLY, COLLAPSED ON PUBLIC WEB) -->
       <section class="section-band apps-section" id="operations">
         <span class="corner-mark tl" aria-hidden="true"></span>
         <span class="corner-mark tr" aria-hidden="true"></span>
@@ -234,8 +312,8 @@
           <details class="ops-drawer" id="opsDrawer" open>
             <summary>
               <div>
-                <span class="section-index">02 · ON-SITE ROBOT CONSOLES</span>
-                <h2>Local Robot &amp; Operator Tools</h2>
+                <span class="section-index">03 · ON-SITE OPERATOR CONSOLES</span>
+                <h2>Local Robot Tools</h2>
               </div>
               <span class="drawer-pill" id="opsDrawerLabel">
                 <span id="opsDrawerHint">Local Wi-Fi · 6 consoles</span>
@@ -392,13 +470,15 @@
       <span class="corner-mark tr" aria-hidden="true"></span>
       <div class="wrap footer-inner">
         <div class="footer-left">
-          <span>STEADWELL · LUKA v. A2U</span>
+          <span>STEADWELL ROBOTICS</span>
           <span>·</span>
-          <a href="https://vaultbots.com" target="_blank" rel="noopener" style="color:var(--cyan)" data-track-link="vaultbots.com">Purchase at vaultbots.com ↗</a>
+          <a href="https://vaultbots.com" target="_blank" rel="noopener" style="color:var(--cyan)" data-track-link="vaultbots.com">Purchase on vaultbots.com ↗</a>
         </div>
         <div class="footer-links">
+          <a href="#fleet">Fleet</a>
+          <a href="#studios">Studios</a>
           <a href="./analytics.html">Analytics</a>
-          <span class="footer-keys">Quick keys: <kbd>1</kbd>–<kbd>8</kbd></span>
+          <span class="footer-keys">Keys <kbd>1</kbd>–<kbd>8</kbd></span>
         </div>
       </div>
     </footer>
