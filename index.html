@@ -25,19 +25,20 @@
         </a>
 
         <nav class="nav-links" aria-label="Sections">
-          <a href="#simulation">Simulation</a>
-          <a href="#operations">Operations</a>
-          <a href="#telemetry">Telemetry</a>
+          <a href="#try-luka">Try Luka</a>
+          <a href="#own-luka">Purchase</a>
+          <a href="#operations">On-Site Tools</a>
           <a href="./analytics.html">Analytics</a>
+          <a href="https://vaultbots.com" target="_blank" rel="noopener" class="nav-buy" data-track-link="vaultbots.com">VaultBots ↗</a>
         </nav>
 
         <div class="top-right">
-          <span class="suite-pill" title="Live local suite status">
+          <span class="suite-pill" title="Live app readiness">
             <i id="suiteStatusDot" class="pulse-dot" data-state="sim"></i>
-            <span id="suiteStatusText">CHECKING SUITE…</span>
+            <span id="suiteStatusText">READY IN BROWSER</span>
           </span>
-          <a href="./luka-sim.html" class="btn btn-primary btn-compact">
-            Open Sim <span class="arrow" aria-hidden="true">→</span>
+          <a href="./luka-sim.html" class="btn btn-primary btn-compact" data-track-link="Talk & Mirror Studio (Header)">
+            Try Luka <span class="arrow" aria-hidden="true">→</span>
           </a>
         </div>
       </div>
@@ -50,39 +51,42 @@
           <div>
             <div class="eyebrow"><i></i>LUKA · v. A2U</div>
             <h1 class="hero-title word-reveal" data-word-reveal>
-              Luka v. A2U.<br />
-              <span class="muted-line">Every studio in one place.</span>
+              Meet Luka.<br />
+              <span class="muted-line">Talk, move, and explore live.</span>
             </h1>
             <p class="hero-sub">
-              Launch embodied upper-body simulation, 52-DOF full-body kinematics, live voice dialogue,
-              and bounded hardware operations from one quiet workspace.
+              Experience Luka right in your browser — speak with him, mirror your hand and arm movements
+              using your webcam, or explore his full-body 3D motion. No setup required.
             </p>
             <div class="hero-actions">
-              <a href="./luka-sim.html" class="btn btn-primary">
-                Launch Upper-Body Sim <span class="arrow" aria-hidden="true">→</span>
+              <a href="./luka-sim.html" class="btn btn-primary" data-track-link="Talk & Mirror Studio (Hero)">
+                Start Talking &amp; Moving <span class="arrow" aria-hidden="true">→</span>
               </a>
-              <a href="./cockpit.html" class="btn">
-                Full-Body Cockpit <span class="arrow" aria-hidden="true">↗</span>
+              <a href="./cockpit.html" class="btn" data-track-link="Full-Body 3D Explorer (Hero)">
+                Full-Body Explorer <span class="arrow" aria-hidden="true">↗</span>
+              </a>
+              <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn" data-track-link="vaultbots.com">
+                Buy Luka at VaultBots <span class="arrow" aria-hidden="true">↗</span>
               </a>
             </div>
             <div class="hero-metrics">
               <div class="metric">
-                <b id="metricOnline">2 / 8</b>
-                <span>Apps reachable</span>
+                <b>Voice &amp; Chat</b>
+                <span>Hold to talk or type naturally</span>
               </div>
               <div class="metric">
-                <b>16 + 10 DOF</b>
-                <span>Upper body &amp; RH56 hands</span>
+                <b>Webcam Mirror</b>
+                <span>Arms &amp; fingers follow you live</span>
               </div>
               <div class="metric">
-                <b>AimDK §7.1</b>
-                <span>Hardware envelope default</span>
+                <b>Safe by Design</b>
+                <span>Real hardware motion limits</span>
               </div>
             </div>
           </div>
 
           <!-- Interactive Obsidian OLED Visor Medallion -->
-          <div class="visor-stage" aria-label="Luka obsidian OLED head preview">
+          <div class="visor-stage" aria-label="Luka interactive obsidian head preview">
             <div class="visor-orbit-wrap">
               <div class="orbit-ring outer" aria-hidden="true"></div>
               <div class="orbit-ring mid" aria-hidden="true"><span class="orbit-node"></span></div>
@@ -102,25 +106,24 @@
             </div>
 
             <div class="visor-caption">
-              <strong>HEAD_LINK02 · OBSIDIAN OLED</strong>
-              <span>±45° PAN · ±23° TILT</span>
+              <strong>LUKA · INTERACTIVE HEAD</strong>
+              <span>MOVE CURSOR TO LOOK</span>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- SECTION 01: SIMULATION & DIGITAL TWINS -->
-      <section class="section-band apps-section" id="simulation">
+      <!-- SECTION 01: START HERE (WORKS IN ANY BROWSER) -->
+      <section class="section-band apps-section" id="try-luka">
         <span class="corner-mark tl" aria-hidden="true"></span>
         <span class="corner-mark tr" aria-hidden="true"></span>
         <div class="wrap">
-
           <div class="section-head">
             <div>
-              <span class="section-index">01 · SIMULATION &amp; DIGITAL TWINS</span>
-              <h2>Interactive Robotics Studios</h2>
+              <span class="section-index">01 · START HERE · WORKS IN ANY BROWSER</span>
+              <h2>Try Luka Live</h2>
             </div>
-            <p class="section-note">Run directly in the browser with WebGPU / WebGL2 and zero physical writes.</p>
+            <p class="section-note">Pick either interactive studio below — no downloads, accounts, or robot hardware needed.</p>
           </div>
 
           <div class="featured-grid">
@@ -135,28 +138,28 @@
                       <path d="M8 20v-3a4 4 0 0 1 8 0v3" />
                     </svg>
                   </span>
-                  <span class="card-num">01</span>
+                  <span class="card-num">01 · RECOMMENDED</span>
                 </div>
                 <span class="status-tag" data-status="ready"><i></i><span>READY</span></span>
               </div>
 
               <div class="card-body">
-                <h3>Luka Upper-Body Sim</h3>
+                <h3>Talk &amp; Mirror Studio</h3>
                 <p>
-                  Embodied Luka v. A2U upper-body twin with obsidian OLED head, Whisper + Inworld speech,
-                  Kameyoko webcam hand/arm mirroring, Trellis memory, and real AimDK actuator limits.
+                  Have a real-time conversation with Luka, try expressive hand and head gestures, teach new poses,
+                  or turn on your webcam so his arms and fingers mirror yours smoothly.
                 </p>
                 <div class="tag-row">
-                  <span class="micro-tag">Speech ASR/TTS</span>
-                  <span class="micro-tag">Kameyoko Vision</span>
-                  <span class="micro-tag">Trellis Context</span>
-                  <span class="micro-tag">HW Safety HUD</span>
+                  <span class="micro-tag">Voice &amp; Chat</span>
+                  <span class="micro-tag">Webcam Mirror</span>
+                  <span class="micro-tag">Hand Gestures</span>
+                  <span class="micro-tag">Memory</span>
                 </div>
               </div>
 
               <div class="card-foot">
-                <span>/luka-sim.html</span>
-                <span class="card-launch">Launch <span class="arrow" aria-hidden="true">↗</span></span>
+                <span>Best place to start</span>
+                <span class="card-launch">Start Studio <span class="arrow" aria-hidden="true">↗</span></span>
               </div>
             </a>
 
@@ -178,181 +181,208 @@
               </div>
 
               <div class="card-body">
-                <h3>Full-Body A2U Cockpit</h3>
+                <h3>Full-Body 3D Explorer</h3>
                 <p>
-                  Complete 52-DOF bipedal digital twin with manual joint inspector, recorded motion choreography,
-                  authority state machine, and read-only AimDK hardware telemetry link.
+                  Inspect Luka from head to toe in 3D, replay real recorded movements, test individual joint controls,
+                  and orbit freely around the full humanoid model.
                 </p>
                 <div class="tag-row">
-                  <span class="micro-tag">52-DOF Twin</span>
-                  <span class="micro-tag">WebGPU / WebGL2</span>
-                  <span class="micro-tag">Recordings</span>
-                  <span class="micro-tag">Read-Only Link</span>
+                  <span class="micro-tag">Full-Body 3D</span>
+                  <span class="micro-tag">Motion Replays</span>
+                  <span class="micro-tag">Joint Controls</span>
+                  <span class="micro-tag">Live Status</span>
                 </div>
               </div>
 
               <div class="card-foot">
-                <span>/cockpit.html</span>
-                <span class="card-launch">Launch <span class="arrow" aria-hidden="true">↗</span></span>
+                <span>Full humanoid view</span>
+                <span class="card-launch">Open Explorer <span class="arrow" aria-hidden="true">↗</span></span>
               </div>
             </a>
           </div>
         </div>
       </section>
 
-      <!-- SECTION 02: LIVE OPERATIONS, VOICE & TELEMETRY -->
+      <!-- PURCHASE BAND: VAULTBOTS.COM -->
+      <section class="section-band purchase-band" id="own-luka">
+        <span class="corner-mark tl" aria-hidden="true"></span>
+        <span class="corner-mark tr" aria-hidden="true"></span>
+        <div class="wrap">
+          <div class="purchase-card">
+            <div class="purchase-copy">
+              <span class="section-index">OWN LUKA · VAULTBOTS</span>
+              <h2>Interested in purchasing Luka for your team or space?</h2>
+              <p>
+                Explore availability, configurations, and hands-on deployment support for Luka v. A2U directly through
+                our storefront at VaultBots.
+              </p>
+            </div>
+            <div class="purchase-actions">
+              <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn btn-primary" data-track-link="vaultbots.com">
+                Visit vaultbots.com <span class="arrow" aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 02: ON-SITE ROBOT TOOLS (OPEN LOCALLY, COLLAPSED BY DEFAULT ON PUBLIC WEB) -->
       <section class="section-band apps-section" id="operations">
         <span class="corner-mark tl" aria-hidden="true"></span>
         <span class="corner-mark tr" aria-hidden="true"></span>
         <div class="wrap">
+          <details class="ops-drawer" id="opsDrawer" open>
+            <summary>
+              <div>
+                <span class="section-index">02 · ON-SITE ROBOT CONSOLES</span>
+                <h2>Local Robot &amp; Operator Tools</h2>
+              </div>
+              <span class="drawer-pill" id="opsDrawerLabel">
+                <span id="opsDrawerHint">Local Wi-Fi · 6 consoles</span>
+                <span class="drawer-chevron" aria-hidden="true">▾</span>
+              </span>
+            </summary>
 
-          <div class="section-head" id="telemetry">
-            <div>
-              <span class="section-index">02 · LIVE OPERATIONS, VOICE &amp; SENSORS</span>
-              <h2>Gateway, Voice &amp; Field Consoles</h2>
+            <div class="ops-grid">
+              <a class="app-card reveal-card" href="http://127.0.0.1:8788/" data-service="gateway" data-path="/" data-app-index="3" style="--card-i:0">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                    </span>
+                    <span class="card-num">03</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="gateway"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>Robot Control Hub</h3>
+                  <p>Safety permissions, live robot health, emergency software stop, and activity history.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8788/</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+
+              <a class="app-card reveal-card" href="http://127.0.0.1:8791/chat" data-service="bridge" data-path="/chat" data-app-index="4" style="--card-i:1">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                    </span>
+                    <span class="card-num">04</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="bridge"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>LukaChat</h3>
+                  <p>Simple live voice conversation screen with game controller support and gentle head movement.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8791/chat</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+
+              <a class="app-card reveal-card" href="http://127.0.0.1:8788/voice.html" data-service="gateway" data-path="/voice.html" data-app-index="5" style="--card-i:2">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="22" />
+                      </svg>
+                    </span>
+                    <span class="card-num">05</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="gateway"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>Voice Console</h3>
+                  <p>Test push-to-talk speech recognition, voice readiness, and live conversation timing.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8788/voice.html</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+
+              <a class="app-card reveal-card" href="http://127.0.0.1:8791/" data-service="bridge" data-path="/" data-app-index="6" style="--card-i:3">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 12h3l2-6 4 12 3-8 2 2h6" />
+                      </svg>
+                    </span>
+                    <span class="card-num">06</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="bridge"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>Audio &amp; Transcript</h3>
+                  <p>Hear Luka’s live audio, read real-time transcripts, pick voices, and nudge his head.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8791/</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+
+              <a class="app-card reveal-card" href="http://127.0.0.1:8788/lidar.html" data-service="gateway" data-path="/lidar.html" data-app-index="7" style="--card-i:4">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <circle cx="12" cy="12" r="4.5" />
+                        <line x1="12" y1="3" x2="12" y2="12" />
+                      </svg>
+                    </span>
+                    <span class="card-num">07</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="gateway"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>3D Room Scan (LiDAR)</h3>
+                  <p>Live 3D spatial view showing how Luka maps the room around him.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8788/lidar.html</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+
+              <a class="app-card reveal-card" href="http://127.0.0.1:8788/room.html" data-service="gateway" data-path="/room.html" data-app-index="8" style="--card-i:5">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+                        <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                        <circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none" />
+                      </svg>
+                    </span>
+                    <span class="card-num">08</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="gateway"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>Room Sensors</h3>
+                  <p>Room sound levels and camera presence indicators from the local workstation.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8788/room.html</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
             </div>
-            <p class="section-note">Local services on Gateway (:8788) and Luka Bridge (:8791) with live status.</p>
-          </div>
-
-          <div class="ops-grid">
-            <a class="app-card reveal-card" href="http://127.0.0.1:8788/" data-service="gateway" data-path="/" data-app-index="3" style="--card-i:0">
-              <div class="card-top">
-                <div class="card-id">
-                  <span class="card-icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                  </span>
-                  <span class="card-num">03</span>
-                </div>
-                <span class="status-tag" data-service-badge="gateway"><i></i><span>CHECKING</span></span>
-              </div>
-              <div class="card-body">
-                <h3>Robot Gateway</h3>
-                <p>Lease-gated capability control plane, safety contract verification, software stop, and audit log.</p>
-              </div>
-              <div class="card-foot">
-                <span data-endpoint>:8788/</span>
-                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
-              </div>
-            </a>
-
-            <a class="app-card reveal-card" href="http://127.0.0.1:8791/chat" data-service="bridge" data-path="/chat" data-app-index="4" style="--card-i:1">
-              <div class="card-top">
-                <div class="card-id">
-                  <span class="card-icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </span>
-                  <span class="card-num">04</span>
-                </div>
-                <span class="status-tag" data-service-badge="bridge"><i></i><span>CHECKING</span></span>
-              </div>
-              <div class="card-body">
-                <h3>LukaChat</h3>
-                <p>Focused speech &amp; controller conversation interface with hardware-verified ±10°/±5° head jog controls.</p>
-              </div>
-              <div class="card-foot">
-                <span data-endpoint>:8791/chat</span>
-                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
-              </div>
-            </a>
-
-            <a class="app-card reveal-card" href="http://127.0.0.1:8788/voice.html" data-service="gateway" data-path="/voice.html" data-app-index="5" style="--card-i:2">
-              <div class="card-top">
-                <div class="card-id">
-                  <span class="card-icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                      <line x1="12" y1="19" x2="12" y2="22" />
-                    </svg>
-                  </span>
-                  <span class="card-num">05</span>
-                </div>
-                <span class="status-tag" data-service-badge="gateway"><i></i><span>CHECKING</span></span>
-              </div>
-              <div class="card-body">
-                <h3>Voice Console</h3>
-                <p>Push-to-talk speech pipeline diagnostics, provider readiness checks, and bounded turn inspection.</p>
-              </div>
-              <div class="card-foot">
-                <span data-endpoint>:8788/voice.html</span>
-                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
-              </div>
-            </a>
-
-            <a class="app-card reveal-card" href="http://127.0.0.1:8791/" data-service="bridge" data-path="/" data-app-index="6" style="--card-i:3">
-              <div class="card-top">
-                <div class="card-id">
-                  <span class="card-icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M2 12h3l2-6 4 12 3-8 2 2h6" />
-                    </svg>
-                  </span>
-                  <span class="card-num">06</span>
-                </div>
-                <span class="status-tag" data-service-badge="bridge"><i></i><span>CHECKING</span></span>
-              </div>
-              <div class="card-body">
-                <h3>Audio + Transcript</h3>
-                <p>Live Orin audio monitor, Whisper transcript stream, Inworld voice switcher, and head panel.</p>
-              </div>
-              <div class="card-foot">
-                <span data-endpoint>:8791/</span>
-                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
-              </div>
-            </a>
-
-            <a class="app-card reveal-card" href="http://127.0.0.1:8788/lidar.html" data-service="gateway" data-path="/lidar.html" data-app-index="7" style="--card-i:4">
-              <div class="card-top">
-                <div class="card-id">
-                  <span class="card-icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="9" />
-                      <circle cx="12" cy="12" r="4.5" />
-                      <line x1="12" y1="3" x2="12" y2="12" />
-                    </svg>
-                  </span>
-                  <span class="card-num">07</span>
-                </div>
-                <span class="status-tag" data-service-badge="gateway"><i></i><span>CHECKING</span></span>
-              </div>
-              <div class="card-body">
-                <h3>LiDAR Space</h3>
-                <p>Real-time 3D point-cloud viewport with live-frame streaming and persistent room accumulation.</p>
-              </div>
-              <div class="card-foot">
-                <span data-endpoint>:8788/lidar.html</span>
-                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
-              </div>
-            </a>
-
-            <a class="app-card reveal-card" href="http://127.0.0.1:8788/room.html" data-service="gateway" data-path="/room.html" data-app-index="8" style="--card-i:5">
-              <div class="card-top">
-                <div class="card-id">
-                  <span class="card-icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-                      <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-                      <circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none" />
-                    </svg>
-                  </span>
-                  <span class="card-num">08</span>
-                </div>
-                <span class="status-tag" data-service-badge="gateway"><i></i><span>CHECKING</span></span>
-              </div>
-              <div class="card-body">
-                <h3>Room Sensors</h3>
-                <p>Ground-truth host microphone dBFS and camera presence telemetry streamed into the gateway.</p>
-              </div>
-              <div class="card-foot">
-                <span data-endpoint>:8788/room.html</span>
-                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
-              </div>
-            </a>
-          </div>
+          </details>
         </div>
       </section>
     </main>
@@ -364,11 +394,11 @@
         <div class="footer-left">
           <span>STEADWELL · LUKA v. A2U</span>
           <span>·</span>
-          <span>PHYSICAL WRITES CLOSED BY DEFAULT</span>
+          <a href="https://vaultbots.com" target="_blank" rel="noopener" style="color:var(--cyan)" data-track-link="vaultbots.com">Purchase at vaultbots.com ↗</a>
         </div>
-        <div class="footer-keys">
-          <span>Quick launch:</span>
-          <kbd>1</kbd>–<kbd>8</kbd>
+        <div class="footer-links">
+          <a href="./analytics.html">Analytics</a>
+          <span class="footer-keys">Quick keys: <kbd>1</kbd>–<kbd>8</kbd></span>
         </div>
       </div>
     </footer>

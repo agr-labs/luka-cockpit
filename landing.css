@@ -1009,6 +1009,147 @@ html.js .reveal-card.is-shown:hover {
   transform: translate3d(3px, -2px, 0);
 }
 
+/* ------------------------------------------------ VaultBots Purchase Band */
+
+.purchase-band {
+  padding: clamp(32px, 4.5vw, 48px) 0;
+}
+
+.purchase-card {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: clamp(24px, 3.6vw, 34px);
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse 60% 100% at 100% 0%, rgba(56, 217, 245, 0.11), transparent 65%),
+    var(--bg-glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+.purchase-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(56, 217, 245, 0.38), rgba(255, 255, 255, 0.14) 45%, rgba(255, 255, 255, 0.03) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.purchase-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 58ch;
+}
+
+.purchase-copy h2 {
+  margin: 0 0 8px;
+  font-size: clamp(20px, 2.5vw, 26px);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.purchase-copy p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.58;
+  color: var(--ink-2);
+}
+
+.purchase-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ------------------------------------------- Collapsible On-Site Drawer */
+
+.ops-drawer {
+  width: 100%;
+}
+
+.ops-drawer > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 2px;
+  user-select: none;
+}
+
+.ops-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.drawer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.035);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.ops-drawer > summary:hover .drawer-pill {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: var(--ink);
+}
+
+.drawer-chevron {
+  display: inline-block;
+  transition: transform 0.25s var(--ease-out);
+}
+
+.ops-drawer[open] .drawer-chevron {
+  transform: rotate(180deg);
+}
+
+.ops-drawer[open] .ops-grid {
+  margin-top: 24px;
+}
+
+.nav-buy {
+  color: var(--cyan) !important;
+}
+
+.footer-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.footer-links a {
+  color: var(--ink-2);
+  transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+  color: var(--ink);
+}
+
 /* ---------------------------------------------------------------- Footer */
 
 .footer {

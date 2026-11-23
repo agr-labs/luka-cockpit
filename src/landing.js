@@ -265,15 +265,18 @@ async function probeEndpoint(url, timeoutMs = 1400) {
 async function syncServiceHealth(origins) {
   const pillText = document.getElementById('suiteStatusText');
   const pillDot = document.getElementById('suiteStatusDot');
-  const onlineCountEl = document.getElementById('metricOnline');
+  const opsDrawer = document.getElementById('opsDrawer');
+  const opsHint = document.getElementById('opsDrawerHint');
 
   if (isStaticBuild) {
-    if (pillText) pillText.textContent = '2 SIM APPS READY';
+    if (pillText) pillText.textContent = 'LIVE IN BROWSER';
     if (pillDot) pillDot.dataset.state = 'sim';
-    if (onlineCountEl) onlineCountEl.textContent = '2 / 8';
+    // Collapse local-only operator consoles by default on public web so non-technical visitors stay focused
+    if (opsDrawer) opsDrawer.open = false;
+    if (opsHint) opsHint.textContent = 'On-site Wi-Fi only · Show 6 tools';
     document.querySelectorAll('[data-service-badge]').forEach((el) => {
       el.dataset.status = 'standby';
-      el.querySelector('span').textContent = 'LOCAL ONLY';
+      el.querySelector('span').textContent = 'ON-SITE ONLY';
     });
     return;
   }
@@ -284,7 +287,7 @@ async function syncServiceHealth(origins) {
   ]);
 
   const statusMap = { gateway: gwUp, bridge: brUp };
-  let onlineApps = 2; // Upper-Body Sim & Full-Body Cockpit on same origin are always ready
+  let onlineApps = 2; // Talk & Mirror Studio + Full-Body Explorer on same origin are always ready
 
   document.querySelectorAll('[data-service-badge]').forEach((badge) => {
     const svc = badge.dataset.serviceBadge;
@@ -295,9 +298,9 @@ async function syncServiceHealth(origins) {
     if (lbl) lbl.textContent = up ? 'ONLINE' : 'STANDBY';
   });
 
-  if (pillText) pillText.textContent = `${onlineApps} / 8 APPS ONLINE`;
+  if (pillText) pillText.textContent = `${onlineApps} / 8 READY`;
   if (pillDot) pillDot.dataset.state = gwUp || brUp ? 'online' : 'sim';
-  if (onlineCountEl) onlineCountEl.textContent = `${onlineApps} / 8`;
+  if (opsHint) opsHint.textContent = `Local network · ${onlineApps - 2} / 6 online`;
 }
 
 /* ------------------------------------ 6. Quick Keyboard Launch (1..8) */
@@ -313,6 +316,25 @@ function initKeyboardShortcuts() {
       });
       void metrics.flush(true);
     });
+  });
+
+  document.querySelectorAll('a[data-track-link]').forEach((link) => {
+    link.addEventListener('click', () => {
+      metrics.track('app_launch', {
+        category: 'nav',
+        label: link.dataset.trackLink || 'external',
+        meta: { method: 'cta' },
+      });
+      void metrics.flush(true);
+    });
+  });
+
+  // When an accordion drawer is opened on public web, ensure newly revealed cards animate in smoothly
+  const opsDrawer = document.getElementById('opsDrawer');
+  opsDrawer?.addEventListener('toggle', () => {
+    if (opsDrawer.open) {
+      opsDrawer.querySelectorAll('.reveal-card').forEach((c) => c.classList.add('is-shown'));
+    }
   });
 
   window.addEventListener('keydown', (e) => {
