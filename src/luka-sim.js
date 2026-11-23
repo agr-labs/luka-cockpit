@@ -475,7 +475,7 @@ function currentTrackingSummary() {
   return `Kameyoko vision active (${state.trackRetargetMode} mode). Detected operator pose: ${tr.detectedGesture}. Hands visible: ${tr.handCount}. Left openness ${Math.round(tr.openness.left * 100)}%, Right openness ${Math.round(tr.openness.right * 100)}%.`;
 }
 
-async function runConversationTurn({ text = null, wavBlob = null }) {
+async function runConversationTurn({ text = null, wavBlob = null, inputMode = null }) {
   if (['transcribing', 'thinking'].includes(state.phase)) return;
   stopCurrentPlayback();
   const timings = {};
@@ -483,14 +483,23 @@ async function runConversationTurn({ text = null, wavBlob = null }) {
   try {
     let spokenText = text;
     if (wavBlob) {
+      if (isStaticBuild) {
+        setPhase('idle');
+        appendMessage('system', 'Whisper server transcription is local-only — browser speech recognition handles Hold to Talk on static deploys.');
+        return;
+      }
       setPhase('transcribing');
       const res = await fetch('/sim-api/transcribe', {
         method: 'POST',
         headers: { 'Content-Type': 'audio/wav' },
         body: wavBlob,
       });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Transcription failed');
+      const rawBody = await res.text();
+      let data = {};
+      try { data = rawBody ? JSON.parse(rawBody) : {}; } catch { data = {}; }
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || `Transcription unavailable (HTTP ${res.status})`);
+      }
       spokenText = (data.transcript || '').trim();
       timings.asr = data.asr_ms;
       if (!spokenText) {
@@ -639,7 +648,7 @@ async function runConversationTurn({ text = null, wavBlob = null }) {
     const ttsProvMetric = isStaticBuild ? 'browser' : (selVoiceForMetrics.split(':')[0] || 'inworld');
     metrics.track('speech_turn', {
       category: 'speech',
-      label: audioBlob ? 'voice' : 'text',
+      label: inputMode || (wavBlob ? 'voice' : 'text'),
       value: timings.llm ?? null,
       meta: {
         llm: rData.llm || 'unknown',
@@ -860,7 +869,8 @@ async function loadHealthAndVoices() {
       sel.innerHTML = '';
       sel.add(new Option('Browser Speech Synthesis', 'browser:default'));
     }
-    $('speechPill').textContent = 'SPEECH BROWSER SIM';
+    const hasWebSpeech = typeof window !== 'undefined' && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+    $('speechPill').textContent = hasWebSpeech ? 'SPEECH BROWSER VOICE' : 'SPEECH TEXT + TTS';
     $('speechDot').className = 'dot on-cyan';
     return;
   }
@@ -994,6 +1004,9 @@ function wireUI() {
   });
 
   // Hold-to-talk + Click-to-toggle (pointer + keyboard Space) with race-safe arming
+  // Uses local Whisper ASR on serve.mjs, or native Web Speech SpeechRecognition on static Cloudflare Pages!
+  const SpeechRecCtor = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+
   const clearMicAutoStop = () => {
     if (state.micAutoStopTimer) {
       clearTimeout(state.micAutoStopTimer);
@@ -1001,11 +1014,113 @@ function wireUI() {
     }
   };
 
+  function startBrowserSpeechRec() {
+    return new Promise((resolve, reject) => {
+      if (!SpeechRecCtor) {
+        reject(new Error('Browser voice recognition requires Chrome, Edge, or Safari (or run locally with Whisper ASR).'));
+        return;
+      }
+      const rec = new SpeechRecCtor();
+      rec.lang = 'en-US';
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+
+      const session = {
+        rec,
+        finalText: '',
+        interimText: '',
+        ended: false,
+        endResolvers: [],
+        error: null,
+      };
+      let started = false;
+
+      rec.onstart = () => {
+        started = true;
+        resolve(session);
+      };
+      rec.onresult = (ev) => {
+        let fin = '';
+        let interim = '';
+        for (let i = 0; i < ev.results.length; i++) {
+          const r = ev.results[i];
+          if (r.isFinal) fin += `${r[0].transcript} `;
+          else interim += r[0].transcript;
+        }
+        session.finalText = fin.trim();
+        session.interimText = interim.trim();
+        const preview = `${session.finalText} ${session.interimText}`.trim();
+        if (preview && $('talkSub')) {
+          $('talkSub').textContent = `“${preview.slice(-46)}”`;
+        }
+      };
+      rec.onerror = (ev) => {
+        session.error = ev.error || 'speech_error';
+        if (!started) {
+          const err = new Error(ev.error === 'not-allowed' ? 'Microphone permission was denied.' : `Voice recognition error: ${ev.error}`);
+          if (ev.error === 'not-allowed') err.name = 'NotAllowedError';
+          reject(err);
+        }
+      };
+      rec.onend = () => {
+        session.ended = true;
+        for (const fn of session.endResolvers) fn();
+        session.endResolvers = [];
+      };
+
+      try {
+        rec.start();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  async function stopBrowserSpeechRec(send = true) {
+    const session = state.speechRec;
+    state.speechRec = null;
+    if (!session) return '';
+    if (!session.ended) {
+      await new Promise((resolve) => {
+        const timer = setTimeout(resolve, send ? 800 : 120);
+        session.endResolvers.push(() => { clearTimeout(timer); resolve(); });
+        try {
+          if (send) session.rec.stop();
+          else session.rec.abort();
+        } catch {
+          clearTimeout(timer);
+          resolve();
+        }
+      });
+    }
+    return `${session.finalText} ${session.interimText}`.trim();
+  }
+
   async function finishRecordingAndSend(send = true) {
     clearMicAutoStop();
     state.micHeldBy = null;
     state.micLatched = false;
     state.micGen += 1;
+
+    if (isStaticBuild) {
+      const [transcript] = await Promise.all([
+        stopBrowserSpeechRec(send),
+        stopMic().catch(() => null),
+      ]);
+      if (!send) {
+        setPhase('idle');
+        return;
+      }
+      if (!transcript) {
+        setPhase('idle');
+        appendMessage('system', 'No speech detected — hold a little longer and speak clearly (or click once to toggle, then click again to send).');
+        return;
+      }
+      await runConversationTurn({ text: transcript, inputMode: 'voice' });
+      return;
+    }
+
     const result = await stopMic();
     if (!send) {
       setPhase('idle');
@@ -1020,7 +1135,7 @@ function wireUI() {
       }
       return;
     }
-    await runConversationTurn({ wavBlob: result.blob });
+    await runConversationTurn({ wavBlob: result.blob, inputMode: 'voice' });
   }
 
   async function startHold(source) {
@@ -1038,12 +1153,19 @@ function wireUI() {
     const gen = ++state.micGen;
     setPhase('arming');
     try {
-      await openMic();
+      if (isStaticBuild) {
+        state.speechRec = await startBrowserSpeechRec();
+        // Best-effort mic level meter alongside browser SpeechRecognition
+        openMic().catch(() => {});
+      } else {
+        await openMic();
+      }
       state.micPending = false;
       // If user released quickly while getUserMedia was arming (or clicked once to toggle),
       // keep recording in latched toggle mode unless explicitly cancelled!
       if (gen !== state.micGen) {
-        await stopMic();
+        if (isStaticBuild) await stopBrowserSpeechRec(false);
+        await stopMic().catch(() => {});
         return;
       }
       setPhase('listening');
@@ -1055,6 +1177,8 @@ function wireUI() {
       state.micPending = false;
       state.micHeldBy = null;
       state.micLatched = false;
+      if (isStaticBuild) await stopBrowserSpeechRec(false);
+      await stopMic().catch(() => {});
       if (gen === state.micGen) {
         setPhase('error');
         const msg = err?.name === 'NotAllowedError'
@@ -1076,7 +1200,8 @@ function wireUI() {
       state.micPending = false;
       state.micGen += 1;
       clearMicAutoStop();
-      await stopMic();
+      if (isStaticBuild) await stopBrowserSpeechRec(false);
+      await stopMic().catch(() => {});
       setPhase('idle');
       return;
     }
