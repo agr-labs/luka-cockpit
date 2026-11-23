@@ -7,10 +7,13 @@ import { Playback, RECORDINGS, loadRecording } from './a2rec.js';
 import { detectEnvironment, describeEnvironment, MODES } from './env.js';
 import { buildFingers, curlFromHandValue, handValueForKey } from './fingers.js';
 import { ArmController, ARM_JOINTS, RATE_LIMITS, makeTransport } from './armcontrol.js';
+import { createMetricsClient } from './metrics.js';
 import { clamp, damp, DEG, m4 } from './mathx.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
+const metrics = createMetricsClient('cockpit');
+const bootStartedAt = performance.now();
 
 const safety = new SafetyController();
 const link = new RobotLink('');
@@ -199,6 +202,12 @@ async function boot() {
   requestAnimationFrame(frame);
   window.__cockpit = { safety, link, state, renderer, model, STATE, Playback, arm: state.arm, transport: state.armTransport, env: state.env, captureCalibration, resetCalibration, calibration: () => state.calibration };
   showMeta();
+  metrics.track('sim_boot', {
+    category: 'perf',
+    label: renderer?.kind || 'unknown',
+    value: Math.round(performance.now() - bootStartedAt),
+    meta: { renderer: renderer?.kind || 'unknown', env: state.env?.mode || 'sim' },
+  });
   bootDone();
 }
 
@@ -504,6 +513,7 @@ async function ensureRecording(id) {
   if (state.playback && state.playbackIndex === idx) return state.playback;
   $('timeRead').textContent = 'loading…';
   const rec = await loadRecording(meta.file);
+  metrics.track('recording_play', { category: 'motion', label: meta.id || meta.file, value: Math.round(rec.duration || 0) });
   state.playback = new Playback(rec);
   state.playbackIndex = idx;
   // Only primary DOF matter here; the linkage joints are rigid by design.

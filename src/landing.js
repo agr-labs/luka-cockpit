@@ -6,8 +6,11 @@
 //   - Passive live service health check for Gateway (:8788) & Bridge (:8791) with static-deploy guard
 //   - Keyboard quick-launch shortcuts (1..8)
 
+import { createMetricsClient } from './metrics.js';
+
 document.documentElement.classList.add('js');
 
+const metrics = createMetricsClient('hub');
 const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
 const isStaticBuild = document.querySelector('meta[name="luka-env"]')?.content === 'static';
 
@@ -300,6 +303,18 @@ async function syncServiceHealth(origins) {
 /* ------------------------------------ 6. Quick Keyboard Launch (1..8) */
 
 function initKeyboardShortcuts() {
+  document.querySelectorAll('a.app-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const name = card.querySelector('h3')?.textContent?.trim() || card.dataset.appIndex || 'app';
+      metrics.track('app_launch', {
+        category: 'nav',
+        label: name,
+        meta: { method: 'click', index: Number(card.dataset.appIndex || 0) },
+      });
+      void metrics.flush(true);
+    });
+  });
+
   window.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
@@ -307,6 +322,9 @@ function initKeyboardShortcuts() {
     if (n >= 1 && n <= 8) {
       const card = document.querySelector(`a.app-card[data-app-index="${n}"]`);
       if (card?.href) {
+        const name = card.querySelector('h3')?.textContent?.trim() || `app_${n}`;
+        metrics.track('app_launch', { category: 'nav', label: name, meta: { method: 'keyboard', index: n } });
+        void metrics.flush(true);
         if (card.target === '_blank') window.open(card.href, '_blank', 'noopener');
         else window.location.href = card.href;
       }

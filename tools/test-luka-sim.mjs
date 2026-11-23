@@ -48,6 +48,12 @@ import {
   parseEmbodiedDirective,
   localEmbodiedFallback,
 } from '../src/sim-api.mjs';
+import {
+  sanitizeEventBatch,
+  aggregateMetrics,
+  eventsToCsv,
+  eventsToJsonl,
+} from '../src/metrics-agg.mjs';
 
 const modelJson = JSON.parse(await readFile(new URL('../model/generated/luka.model.json', import.meta.url), 'utf8'));
 
@@ -675,6 +681,124 @@ test('sim-api directive parser and HTTP routes behave cleanly without touching p
 
     const unRes = await fetch(`http://127.0.0.1:${port}/api/robot/setAction`, { method: 'POST' });
     assert.equal(unRes.status, 404, 'handleSimApi never intercepts physical robot routes');
+  } finally {
+    await new Promise((r) => srv.close(r));
+  }
+});
+
+test('privacy-first analytics sanitization, robotics aggregation, export, and /sim-api/metrics routes', async () => {
+  const now = Date.now();
+  // 1. Forbidden PII / raw transcript keys are stripped, unknown events are rejected
+  const batch = sanitizeEventBatch({
+    events: [
+      {
+        ts: now,
+        session_id: 'sess-alpha',
+        app: 'luka-sim',
+        event: 'speech_turn',
+        category: 'speech',
+        label: 'voice',
+        value: 420,
+        meta: {
+          llm: 'prism',
+          tts: 'inworld',
+          gesture: 'wave',
+          asrMs: 980,
+          llmMs: 420,
+          claims: 2,
+          transcript: 'SHOULD_BE_STRIPPED',
+          email: 'hidden@example.com',
+          token: 'secret-tok',
+        },
+      },
+      {
+        ts: now,
+        session_id: 'sess-alpha',
+        app: 'luka-sim',
+        event: 'vision_guard',
+        category: 'vision',
+        label: 'out_of_frame',
+        meta: { side: 'left', source: 'camera' },
+      },
+      {
+        ts: now,
+        session_id: 'sess-alpha',
+        app: 'luka-sim',
+        event: 'safety_snapshot',
+        category: 'safety',
+        label: 'hardware',
+        meta: { fps: 60, peakSpeed: 1.85, peakAccel: 4.4, wristLoadMax: 82, clamps: ['left_wrist_rhombic'] },
+      },
+      {
+        ts: now,
+        session_id: 'sess-beta',
+        app: 'hub',
+        event: 'app_launch',
+        category: 'nav',
+        label: 'Luka Upper-Body Sim',
+        meta: { method: 'click' },
+      },
+      {
+        // Unknown event should be cleanly rejected
+        ts: now,
+        session_id: 'sess-beta',
+        app: 'hub',
+        event: 'arbitrary_unlisted_event',
+        category: 'nav',
+      },
+    ],
+  }, { defaultEnv: 'pages', nowMs: now });
+
+  assert.equal(batch.ok, true);
+  assert.equal(batch.events.length, 4);
+  assert.equal(batch.rejected, 1);
+  const meta0 = JSON.parse(batch.events[0].meta_json);
+  assert.equal(meta0.transcript, undefined, 'raw speech transcript stripped');
+  assert.equal(meta0.email, undefined, 'email stripped');
+  assert.equal(meta0.token, undefined, 'token stripped');
+  assert.equal(meta0.gesture, 'wave');
+
+  // 2. Aggregation rolls up unique sessions, latencies, vision guard reasons & safety clamps
+  const agg = aggregateMetrics(batch.events, { days: 7, nowMs: now });
+  assert.equal(agg.overview.uniqueSessions, 2);
+  assert.equal(agg.overview.speechTurns, 1);
+  assert.equal(agg.overview.avgAsrMs, 980);
+  assert.equal(agg.overview.avgLlmMs, 420);
+  assert.equal(agg.overview.avgFps, 60);
+  assert.equal(agg.overview.visionGuardEvents, 1);
+  assert.equal(agg.vision.guardReasons[0].name, 'out_of_frame');
+  assert.equal(agg.safety.peakWristLoadPct, 82);
+  assert.equal(agg.safety.topClamps[0].name, 'left_wrist_rhombic');
+  assert.equal(agg.appLaunches[0].name, 'Luka Upper-Body Sim');
+
+  // 3. CSV and JSONL export formats round-trip cleanly
+  const csv = eventsToCsv(batch.events);
+  assert.ok(csv.startsWith('ts,iso,session_id,env,app,event,category,label,value,meta_json\n'));
+  assert.equal(csv.trim().split('\n').length, 5);
+  const jsonl = eventsToJsonl(batch.events);
+  assert.equal(jsonl.trim().split('\n').length, 4);
+
+  // 4. Local /sim-api/metrics summary & export HTTP routes respond cleanly
+  const srv = http.createServer(async (req, res) => {
+    const url = new URL(req.url, 'http://127.0.0.1');
+    const handled = await handleSimApi(req, res, url);
+    if (!handled) { res.writeHead(404).end('not handled'); }
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const { port } = srv.address();
+  try {
+    const sumRes = await fetch(`http://127.0.0.1:${port}/sim-api/metrics/summary?days=7`);
+    assert.equal(sumRes.status, 200);
+    const sumJson = await sumRes.json();
+    assert.equal(sumJson.ok, true);
+    assert.equal(sumJson.storage, 'local-jsonl');
+
+    const badPost = await fetch(`http://127.0.0.1:${port}/sim-api/metrics`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events: [{ event: 'nope' }] }),
+    });
+    assert.equal(badPost.status, 400);
   } finally {
     await new Promise((r) => srv.close(r));
   }

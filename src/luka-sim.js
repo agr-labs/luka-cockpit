@@ -26,11 +26,14 @@ import {
   validateHardwareCommandPacket,
 } from './hw-safety.js';
 import { TrellisEngine } from './trellis-engine.js';
+import { createMetricsClient } from './metrics.js';
 import { clamp, damp, DEG, m4 } from './mathx.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('stageCanvas');
 const isStaticBuild = document.querySelector('meta[name="luka-env"]')?.content === 'static';
+const metrics = createMetricsClient('luka-sim');
+const bootStartedAt = performance.now();
 
 const CAM_PRESETS = {
   front: { azim: 1.57, elev: 0.05, dist: 1.58, target: [0, 1.35, 0] },
@@ -380,7 +383,7 @@ function speakBrowserFallback(text) {
     if (typeof speechSynthesis === 'undefined') { resolve(); return; }
     stopCurrentPlayback();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = 0.96;
+    u.rate = 1.05;
     u.pitch = 0.9;
     let iv = null;
     u.onstart = () => {
@@ -632,6 +635,24 @@ async function runConversationTurn({ text = null, wavBlob = null }) {
     appendMessage('luka', reply, msgTags);
     setPhase('speaking', reply);
 
+    const selVoiceForMetrics = $('voiceSelect')?.value || '';
+    const ttsProvMetric = isStaticBuild ? 'browser' : (selVoiceForMetrics.split(':')[0] || 'inworld');
+    metrics.track('speech_turn', {
+      category: 'speech',
+      label: audioBlob ? 'voice' : 'text',
+      value: timings.llm ?? null,
+      meta: {
+        llm: rData.llm || 'unknown',
+        tts: $('audioOutCheck')?.checked ? ttsProvMetric : 'muted',
+        gesture: gesture || '',
+        skill: chosenSkill?.name || '',
+        asrMs: timings.asr ?? null,
+        llmMs: timings.llm ?? null,
+        claims: claims.length,
+        turns: state.turns,
+      },
+    });
+
     // 6. Synthesize & play Luka's voice with WebAudio RMS driving visor + gestures
     if ($('audioOutCheck').checked) {
       if (isStaticBuild) {
@@ -701,6 +722,16 @@ function updateVisionBadges() {
 }
 
 function stopTracking() {
+  if (state.tracker?.running && state.visionStartedAt) {
+    const durSec = Math.round((performance.now() - state.visionStartedAt) / 1000);
+    metrics.track('vision_session', {
+      category: 'vision',
+      label: state.tracker.sourceMode || 'camera',
+      value: durSec,
+      meta: { retarget: state.trackRetargetMode, action: 'stop' },
+    });
+    state.visionStartedAt = 0;
+  }
   state.tracker?.stop();
   state.motion?.setTrackingMode('off');
   updateVisionBadges();
@@ -901,6 +932,7 @@ function buildGestureAndJointControls() {
     btn.onclick = () => {
       state.motion.clearManualOverrides();
       state.motion.playGesture(name);
+      metrics.track('gesture_play', { category: 'motion', label: name, meta: { source: 'button' } });
     };
     gHost.append(btn);
   }
@@ -1185,6 +1217,7 @@ function wireUI() {
     }
     saveCalibration(state.tracker.calibration);
     syncCalUI(state.tracker.calibration);
+    metrics.track('hand_calibrate', { category: 'vision', label: 'open_hands' });
     $('trackerStatus').textContent = 'Captured open-hand baseline! Residual finger curl zeroed.';
     appendMessage('system', 'Calibrated Luka RH56 open-hand baseline from live Kameyoko tracking.');
   });
@@ -1201,6 +1234,7 @@ function wireUI() {
     btn.addEventListener('click', () => {
       const preset = btn.dataset.handPreset;
       state.motion.setHandPreset(preset);
+      metrics.track('hand_preset', { category: 'motion', label: preset });
       document.querySelectorAll('[data-hand-preset]').forEach((b) => b.classList.toggle('active', b === btn));
     });
   });
@@ -1213,6 +1247,8 @@ function wireUI() {
   $('btnCamStart').addEventListener('click', async () => {
     try {
       await state.tracker.startCamera();
+      state.visionStartedAt = performance.now();
+      metrics.track('vision_session', { category: 'vision', label: 'camera', meta: { retarget: state.trackRetargetMode, action: 'start' } });
       state.motion.setTrackingMode(state.trackRetargetMode);
       updateVisionBadges();
     } catch (err) {
@@ -1223,6 +1259,8 @@ function wireUI() {
 
   $('btnDemoStart').addEventListener('click', () => {
     state.tracker.startDemo();
+    state.visionStartedAt = performance.now();
+    metrics.track('vision_session', { category: 'vision', label: 'demo', meta: { retarget: state.trackRetargetMode, action: 'start' } });
     state.motion.setTrackingMode(state.trackRetargetMode);
     updateVisionBadges();
   });
@@ -1278,6 +1316,7 @@ function wireUI() {
       triggerPhrases: triggers,
       poseSnapshot: snapshot,
     });
+    metrics.track('trellis_event', { category: 'trellis', label: 'teach_skill', meta: { skill: skill.name } });
     $('skillNameInput').value = '';
     $('skillTriggerInput').value = '';
     $('skillDescInput').value = '';
@@ -1319,6 +1358,7 @@ function wireUI() {
   const toggleSoftHold = (forceVal = null) => {
     const next = forceVal === null ? !state.motion.isSoftHold() : Boolean(forceVal);
     state.motion.setSoftHold(next);
+    metrics.track('safety_hold', { category: 'safety', label: next ? 'engage' : 'release', meta: { enabled: next } });
     $('softHoldBtn')?.classList.toggle('active', next);
     if ($('softHoldBtn')) $('softHoldBtn').textContent = next ? 'HELD (RESUME)' : 'SOFT HOLD';
     if ($('btnSoftHoldCard')) $('btnSoftHoldCard').textContent = next ? 'Resume Motion (H)' : 'Soft Hold (H)';
@@ -1330,6 +1370,7 @@ function wireUI() {
       state.motion.setSafetyProfile(btn.dataset.safetyProfile);
       syncSafetyProfileUI();
       const prof = state.motion.getSafetyProfile();
+      metrics.track('safety_profile', { category: 'safety', label: prof.id });
       appendMessage('system', `Safety envelope switched to ${prof.label}: ${prof.description}`);
     });
   });
@@ -1354,6 +1395,11 @@ function wireUI() {
     const pkt = simPoseToHardwarePacket(state.motion.pose, state.motion.hands);
     const neckCheck = validateHardwareCommandPacket(pkt, { allowArms: false });
     const armCheck = validateHardwareCommandPacket(pkt, { allowArms: true });
+    metrics.track('safety_packet_inspect', {
+      category: 'safety',
+      label: neckCheck.ok ? 'neck_pass' : 'neck_refused',
+      meta: { profile: state.motion.getSafetyProfile().id, armGated: armCheck.errors.length },
+    });
     box.hidden = false;
     box.textContent = [
       `DRY-RUN WIRE PREVIEW (physical writes CLOSED)`,
@@ -1694,7 +1740,51 @@ function tick(now) {
       }
     }
 
-    if (tracked) updateTrackingReadout(tracked);
+    if (tracked) {
+      updateTrackingReadout(tracked);
+      // Track Kameyoko failsafe transitions (LOCKED -> HOLD) so we learn real-world occlusion causes
+      const ts = tracked.trackingState;
+      if (ts) {
+        for (const [side, stKey, rKey] of [['left', 'leftArm', 'leftReason'], ['right', 'rightArm', 'rightReason']]) {
+          const prev = state.prevArmTrackState?.[side];
+          const cur = ts[stKey];
+          if (prev === 'LOCKED' && cur === 'HOLD') {
+            metrics.track('vision_guard', {
+              category: 'vision',
+              label: ts[rKey] || 'hold',
+              meta: { side, source: state.tracker?.sourceMode || 'camera' },
+            });
+          }
+        }
+        state.prevArmTrackState = { left: ts.leftArm, right: ts.rightArm };
+      }
+    }
+
+    // Periodic 30s actuator envelope & FPS learning snapshot
+    if (stepOut.safety) {
+      const sf = stepOut.safety;
+      state.metricSnap = state.metricSnap || { elapsed: 0, peakSpeed: 0, peakAccel: 0, wristLoadMax: 0, clamps: new Set() };
+      state.metricSnap.elapsed += 0.1;
+      state.metricSnap.peakSpeed = Math.max(state.metricSnap.peakSpeed, sf.peakSpeedRadS || 0);
+      state.metricSnap.peakAccel = Math.max(state.metricSnap.peakAccel, sf.peakAccelRadS2 || 0);
+      state.metricSnap.wristLoadMax = Math.max(state.metricSnap.wristLoadMax, sf.wristLoadL || 0, sf.wristLoadR || 0);
+      for (const c of sf.activeClamps || []) state.metricSnap.clamps.add(c);
+      if (state.metricSnap.elapsed >= 30) {
+        metrics.track('safety_snapshot', {
+          category: 'safety',
+          label: sf.profileId,
+          value: state.fps || null,
+          meta: {
+            fps: state.fps || 0,
+            peakSpeed: state.metricSnap.peakSpeed,
+            peakAccel: state.metricSnap.peakAccel,
+            wristLoadMax: state.metricSnap.wristLoadMax,
+            clamps: [...state.metricSnap.clamps].slice(0, 6),
+          },
+        });
+        state.metricSnap = { elapsed: 0, peakSpeed: 0, peakAccel: 0, wristLoadMax: 0, clamps: new Set() };
+      }
+    }
   }
 
   // FPS counter
@@ -1727,6 +1817,12 @@ async function boot() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     window.__lukaSim = state;
+    metrics.track('sim_boot', {
+      category: 'perf',
+      label: state.renderer?.kind || 'unknown',
+      value: Math.round(performance.now() - bootStartedAt),
+      meta: { renderer: state.renderer?.kind || 'unknown', dpr: Number((window.devicePixelRatio || 1).toFixed(2)) },
+    });
     bootDone();
     requestAnimationFrame(tick);
   } catch (err) {

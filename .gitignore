@@ -6,8 +6,10 @@ model/generated/
 model/mjcf/
 node_modules/
 dist/
+.venv-face-follow/
 
 .DS_Store
 *.log
 .secrets/
 .luka-trellis-store.json
+data/metrics/

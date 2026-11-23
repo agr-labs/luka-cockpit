@@ -1,0 +1,9 @@
+name = "luka-cockpit"
+compatibility_date = "2026-04-01"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "LUKA_METRICS_DB"
+database_name = "luka-metrics"
+database_id = "89d9e018-4457-4e08-acad-ba824377bf26"
+migrations_dir = "migrations"

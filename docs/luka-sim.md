@@ -50,6 +50,14 @@ The sim defaults to **`HW Spec (A2 Ultra)`** aligned directly to `gateway/lib/co
 - **Local mode (`node serve.mjs`)**: Hold-to-Talk / Click-to-Toggle / `Space` → local `whisper-cli` ASR → embodied LLM reasoning (`[GESTURE:...]` / `[SKILL:...]`) → Inworld `inworld-tts-2` / macOS `say` TTS → WebAudio RMS-driven OLED visor & motion.
 - **Static mode (Cloudflare Pages)**: automatically skips `/sim-api/*` probes (`meta[name="luka-env" content="static"]`), runs browser-local embodied gesture responses + Web Speech Synthesis, persists Trellis in `localStorage`, and loads MediaPipe directly from CDN.
 
+### 5. Privacy-First Analytics & Learning Telemetry (`/analytics.html`)
+- **Zero-PII batched SDK (`src/metrics.js`)**: ephemeral per-tab `session_id`, zero cookies, zero IPs, and strict metadata filtering (`src/metrics-agg.mjs`) that strips any raw speech transcripts, prompts, audio, or credentials.
+- **Signals collected**: app launches, renderer & FPS boot metrics, top gestures/skills, speech pipeline latencies (`ASR ms`, `LLM ms`, voice vs. text), Kameyoko tracking-loss guard reasons (`out_of_frame`, `low_vis`, `bad_bone_len`, `teleport_glitch`), AimDK safety profile usage, Soft Hold triggers, peak actuator speed/accel/rhombic wrist loads, and Trellis skill growth.
+- **Dual storage**:
+  - **Production (Cloudflare Pages)**: Pages Functions (`functions/api/metrics*.js`) backed by Cloudflare D1 (`luka-metrics`, schema in `migrations/0001_metrics.sql`).
+  - **Local (`node serve.mjs`)**: `/sim-api/metrics*` writing to gitignored `data/metrics/events.jsonl`.
+- **Dashboard & Export**: open `/analytics` (or `/analytics.html`) for live 24h / 7d / 30d rollups, JSONL / CSV export, and a browser opt-out toggle.
+
 ## Tests
 
 ```sh

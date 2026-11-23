@@ -11,17 +11,20 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, writeFile, rename, unlink, stat, access } from 'node:fs/promises';
+import { readFile, writeFile, appendFile, mkdir, rename, unlink, stat, access } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
+import { sanitizeEventBatch, aggregateMetrics, eventsToCsv, eventsToJsonl } from './metrics-agg.mjs';
 
 const execFileP = promisify(execFile);
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const VOICE_PROFILE_PATH = join(ROOT, 'config', 'luka-voice.json');
 const TRELLIS_DISK_PATH = join(ROOT, '.luka-trellis-store.json');
+const METRICS_DIR = join(ROOT, 'data', 'metrics');
+const METRICS_FILE = join(METRICS_DIR, 'events.jsonl');
 
 const MEDIAPIPE_ROOTS = [
   process.env.MEDIAPIPE_ROOT,
@@ -84,7 +87,7 @@ let voiceProfile = {
   provider: 'inworld',
   model: 'inworld-tts-2',
   voice: 'Grayson',
-  rate: 0.85,
+  rate: 0.92,
   pitch: -2,
   pitchUnit: 'semitones',
 };
@@ -522,7 +525,7 @@ async function listSayVoices() {
 async function synthesizeInworldWav(text, voice, rate, pitch) {
   if (!INWORLD_KEY) throw new Error('INWORLD_API_KEY is not configured');
   const v = voice || voiceProfile.voice || 'Grayson';
-  const r = Math.max(0.5, Math.min(1.5, Number(rate ?? voiceProfile.rate) || 0.85));
+  const r = Math.max(0.5, Math.min(1.5, Number(rate ?? voiceProfile.rate) || 0.92));
   const pRaw = Number(pitch ?? voiceProfile.pitch);
   const p = Number.isFinite(pRaw) ? Math.max(-12, Math.min(12, pRaw)) : -2;
   const modelId = process.env.INWORLD_TTS_MODEL || voiceProfile.model || 'inworld-tts-2';
@@ -555,7 +558,7 @@ async function synthesizeInworldWav(text, voice, rate, pitch) {
 async function synthesizeSayWav(text, voice, rate) {
   if (!SAY_BIN) throw new Error('macOS say binary unavailable');
   const v = voice && /^[A-Za-z][A-Za-z0-9 .'()_-]{0,50}$/.test(voice) ? voice : 'Daniel';
-  const r = Math.max(100, Math.min(300, Math.round((Number(rate) || 1) * 175)));
+  const r = Math.max(100, Math.min(300, Math.round((Number(rate) || 1) * 190)));
   const wavPath = join(os.tmpdir(), `luka-sim-tts-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.wav`);
   try {
     await execFileP(SAY_BIN, ['-v', v, '-r', String(r), '-o', wavPath, '--data-format=LEI16@22050', text], { timeout: 45_000 });
@@ -619,6 +622,33 @@ async function writeTrellisDisk(payload) {
   const tmp = `${TRELLIS_DISK_PATH}.${randomUUID()}.tmp`;
   await writeFile(tmp, JSON.stringify(payload, null, 2));
   await rename(tmp, TRELLIS_DISK_PATH);
+}
+
+/* ----------------------------------------------------- Local Metrics Log */
+
+async function appendMetricsLocal(events) {
+  await mkdir(METRICS_DIR, { recursive: true });
+  const lines = `${events.map((e) => JSON.stringify(e)).join('\n')}\n`;
+  await appendFile(METRICS_FILE, lines, 'utf8');
+}
+
+async function readMetricsLocal(sinceMs = 0) {
+  try {
+    const raw = await readFile(METRICS_FILE, 'utf8');
+    const out = [];
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const row = JSON.parse(line);
+        if (Number(row.ts) >= sinceMs) out.push(row);
+      } catch {
+        /* skip malformed line */
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
 /* ----------------------------------------------------- Health + MediaPipe */
@@ -810,6 +840,40 @@ export async function handleSimApi(req, res, url) {
         commits: body.commits?.length || 0,
         entities: body.entities?.length || 0,
       });
+      return true;
+    }
+
+    if (url.pathname === '/sim-api/metrics' && req.method === 'POST') {
+      const body = await readJson(req, 32 * 1024);
+      const parsed = sanitizeEventBatch(body, { defaultEnv: 'local', nowMs: Date.now() });
+      if (!parsed.ok) return sendJson(res, 400, { ok: false, error: parsed.error || 'no_valid_events', rejected: parsed.rejected }), true;
+      await appendMetricsLocal(parsed.events);
+      sendJson(res, 202, { ok: true, accepted: parsed.events.length, rejected: parsed.rejected });
+      return true;
+    }
+
+    if (url.pathname === '/sim-api/metrics/summary' && req.method === 'GET') {
+      const days = Math.max(1, Math.min(90, Math.round(Number(url.searchParams.get('days')) || 7)));
+      const nowMs = Date.now();
+      const rows = await readMetricsLocal(nowMs - days * 86400 * 1000);
+      const summary = aggregateMetrics(rows, { days, nowMs });
+      sendJson(res, 200, { ok: true, storage: 'local-jsonl', ...summary });
+      return true;
+    }
+
+    if (url.pathname === '/sim-api/metrics/export' && req.method === 'GET') {
+      const days = Math.max(1, Math.min(90, Math.round(Number(url.searchParams.get('days')) || 30)));
+      const format = url.searchParams.get('format') === 'csv' ? 'csv' : 'jsonl';
+      const rows = await readMetricsLocal(Date.now() - days * 86400 * 1000);
+      const stamp = new Date().toISOString().slice(0, 10);
+      const body = format === 'csv' ? eventsToCsv(rows) : eventsToJsonl(rows);
+      res.writeHead(200, {
+        'Content-Type': format === 'csv' ? 'text/csv; charset=utf-8' : 'application/x-ndjson; charset=utf-8',
+        'Content-Disposition': `attachment; filename="luka-metrics-${stamp}.${format}"`,
+        'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(body);
       return true;
     }
 
