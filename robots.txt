@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /analytics
+Disallow: /api/
+
+Sitemap: https://luka.steadwell.cc/sitemap.xml

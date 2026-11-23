@@ -22,6 +22,10 @@ const FILES = [
   'styles.css',
   'luka-sim.html',
   'luka-sim.css',
+  'favicon.svg',
+  'og-luka.png',
+  'robots.txt',
+  'sitemap.xml',
   'README.md',
 ];
 const DIRS = [
