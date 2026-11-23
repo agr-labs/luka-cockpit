@@ -1504,6 +1504,36 @@ function wireUI() {
     document.querySelector('.tab[data-tab="skills"]')?.click();
   });
 
+  // Responsive topbar menu drawer (tablets & phones <= 1040px)
+  const simMenuToggle = $('simMenuToggle');
+  const simMobileNav = $('simMobileNav');
+  const syncDrawerMirror = () => {
+    const host = $('drawerStatusMirror');
+    if (!host) return;
+    const chips = [
+      $('speechPill')?.textContent,
+      $('visionPill')?.textContent,
+      $('trellisPill')?.textContent,
+      `${$('rendererChip')?.textContent || '…'} · ${$('fpsChip')?.textContent || '– fps'}`,
+    ].filter(Boolean);
+    host.innerHTML = chips.map((c) => `<span class="drawer-stat-chip">${escapeHtml(c)}</span>`).join('');
+  };
+  if (simMenuToggle && simMobileNav) {
+    const closeSimMenu = () => {
+      simMobileNav.hidden = true;
+      simMenuToggle.setAttribute('aria-expanded', 'false');
+    };
+    simMenuToggle.addEventListener('click', () => {
+      const opening = simMobileNav.hidden;
+      if (opening) syncDrawerMirror();
+      simMobileNav.hidden = !opening;
+      simMenuToggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
+    });
+    simMobileNav.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeSimMenu));
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSimMenu(); });
+    window.addEventListener('resize', () => { if (window.innerWidth > 1040 && !simMobileNav.hidden) closeSimMenu(); });
+  }
+
   $('softHoldBtn')?.addEventListener('click', () => toggleSoftHold());
   $('btnSoftHoldCard')?.addEventListener('click', () => toggleSoftHold());
 

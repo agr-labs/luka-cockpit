@@ -18,24 +18,55 @@
   </div>
 
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-dot"></span>
-      <div>
-        <strong>LUKA <span class="accent">UPPER-BODY SIM</span></strong>
+    <div class="topbar-bar">
+      <div class="brand-cluster">
+        <a href="./" class="brand" title="Back to Steadwell Robotics Hub">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+          <span class="brand-text">
+            <strong>LUKA <span class="accent">v. A2U</span></strong>
+            <small>TALK &amp; MIRROR STUDIO</small>
+          </span>
+        </a>
+      </div>
+
+      <div class="status-dock" aria-label="Live studio status">
+        <span class="stat-item"><i id="speechDot" class="dot"></i><span id="speechPill">SPEECH …</span></span>
+        <span class="stat-sep" aria-hidden="true"></span>
+        <span class="stat-item"><i id="visionDot" class="dot"></i><span id="visionPill">VISION OFF</span></span>
+        <span class="stat-sep hide-xl" aria-hidden="true"></span>
+        <span class="stat-item hide-xl"><i class="dot on-cyan"></i><span id="trellisPill">TRELLIS 0</span></span>
+        <span class="stat-sep hide-2xl" aria-hidden="true"></span>
+        <span class="stat-item hide-2xl stat-perf"><span id="rendererChip">…</span><span class="stat-mid">·</span><span id="fpsChip">– fps</span></span>
+      </div>
+
+      <div class="top-actions">
+        <button type="button" id="safetyPillBtn" class="pill pill-btn" title="Open Hardware Safety Envelope & Dry-Run Inspector">
+          <i id="safetyDot" class="dot on"></i>
+          <span id="safetyPill">HW SPEC</span>
+        </button>
+        <button type="button" id="softHoldBtn" class="hold-btn" title="Freeze all upper-body motion cleanly in place (shortcut: H)">SOFT HOLD</button>
+        <span class="sep hide-lg" aria-hidden="true"></span>
+        <nav class="top-nav hide-lg" aria-label="Studio navigation">
+          <a href="./" class="nav-link" title="Back to Steadwell Robotics Hub">Hub</a>
+          <a href="./cockpit.html" class="nav-link" title="Open Full-Body 3D Explorer">Explorer ↗</a>
+          <a href="https://vaultbots.com" target="_blank" rel="noopener" class="nav-link nav-buy">Buy Luka ↗</a>
+        </nav>
+        <button type="button" class="menu-toggle" id="simMenuToggle" aria-expanded="false" aria-controls="simMobileNav" aria-label="Toggle studio menu">
+          <span></span><span></span>
+        </button>
       </div>
     </div>
 
-    <div class="top-pills">
-      <span class="pill"><i id="speechDot" class="dot"></i><span id="speechPill">SPEECH …</span></span>
-      <span class="pill"><i id="visionDot" class="dot"></i><span id="visionPill">VISION OFF</span></span>
-      <span class="pill"><i class="dot on-cyan"></i><span id="trellisPill">TRELLIS 0</span></span>
-      <button type="button" id="safetyPillBtn" class="pill pill-btn" title="Open Hardware Safety Envelope & Dry-Run Inspector"><i id="safetyDot" class="dot on"></i><span id="safetyPill">HW SPEC</span></button>
-      <button type="button" id="softHoldBtn" class="hold-btn" title="Freeze all upper-body motion cleanly in place (shortcut: H)">SOFT HOLD</button>
-      <span class="sep"></span>
-      <span id="rendererChip" class="chip">…</span>
-      <span id="fpsChip" class="chip">– fps</span>
-      <a href="./" class="nav-link" title="Back to Steadwell App Hub">← Hub</a>
-      <a href="./cockpit.html" class="nav-link" title="Open Full Telemetry Cockpit">Full Cockpit ↗</a>
+    <div class="mobile-drawer" id="simMobileNav" hidden>
+      <div class="drawer-inner">
+        <div class="drawer-status" id="drawerStatusMirror"></div>
+        <div class="drawer-links">
+          <a href="./" class="drawer-link">← Robotics Hub</a>
+          <a href="./cockpit.html" class="drawer-link">Full-Body 3D Explorer ↗</a>
+          <a href="./analytics.html" class="drawer-link">Usage &amp; Safety Analytics</a>
+          <a href="https://vaultbots.com" target="_blank" rel="noopener" class="drawer-link drawer-buy">Purchase Luka on VaultBots ↗</a>
+        </div>
+      </div>
     </div>
   </header>
 
