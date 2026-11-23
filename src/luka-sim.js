@@ -21,11 +21,16 @@ import {
   GESTURE_NAMES,
 } from './luka-motion.js';
 import { KameyokoVisionTracker, DEFAULT_HAND_CALIBRATION } from './kameyoko-tracker.js';
+import {
+  simPoseToHardwarePacket,
+  validateHardwareCommandPacket,
+} from './hw-safety.js';
 import { TrellisEngine } from './trellis-engine.js';
 import { clamp, damp, DEG, m4 } from './mathx.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('stageCanvas');
+const isStaticBuild = document.querySelector('meta[name="luka-env"]')?.content === 'static';
 
 const CAM_PRESETS = {
   front: { azim: 1.57, elev: 0.05, dist: 1.58, target: [0, 1.35, 0] },
@@ -517,28 +522,71 @@ async function runConversationTurn({ text = null, wavBlob = null }) {
       tokenBudget: 1600,
     });
 
-    // 3. Call embodied reasoning API
-    const reasonRes = await fetch('/sim-api/reason', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: spokenText,
-        history: state.history.slice(-6),
-        llm: $('llmSelect').value || undefined,
-        trellisContext: compiled.assembledContextText,
-        trellisSummary: compiled.summary,
-        activeSkills: state.trellis.skills.map((s) => ({
-          name: s.name,
-          description: s.description,
-          source: s.source,
-          gesture: s.gesture,
-          triggerPhrases: s.triggerPhrases,
-        })),
-        trackingSummary: currentTrackingSummary(),
-      }),
-    });
-    const rData = await reasonRes.json();
-    if (!reasonRes.ok || !rData.ok) throw new Error(rData.error || 'Reasoning error');
+    // 3. Call embodied reasoning API (or client-side fallback on static Cloudflare Pages)
+    let rData = null;
+    if (!isStaticBuild) {
+      try {
+        const reasonRes = await fetch('/sim-api/reason', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: spokenText,
+            history: state.history.slice(-6),
+            llm: $('llmSelect').value || undefined,
+            trellisContext: compiled.assembledContextText,
+            trellisSummary: compiled.summary,
+            activeSkills: state.trellis.skills.map((s) => ({
+              name: s.name,
+              description: s.description,
+              source: s.source,
+              gesture: s.gesture,
+              triggerPhrases: s.triggerPhrases,
+            })),
+            trackingSummary: currentTrackingSummary(),
+          }),
+        });
+        const parsed = await reasonRes.json();
+        if (reasonRes.ok && parsed.ok) rData = parsed;
+      } catch {
+        rData = null;
+      }
+    }
+    if (!rData) {
+      const low = spokenText.toLowerCase();
+      let g = matchedSkill?.gesture || 'explain';
+      let replyText = 'Got it — running right here in browser sim mode with hardware safety limits active.';
+      if (matchedSkill) {
+        replyText = `Running ${matchedSkill.name.replace(/_/g, ' ')} now.`;
+      } else if (/\b(hi|hello|hey|wave|greet)\b/.test(low)) {
+        g = 'wave';
+        replyText = 'Hey! Great to see you — waving right now within my A2U actuator limits.';
+      } else if (/\b(nod|yes|agree|yep|sure)\b/.test(low)) {
+        g = 'nod';
+        replyText = 'Absolutely, nodding along with you.';
+      } else if (/\b(no|nope|shake|disagree)\b/.test(low)) {
+        g = 'shake_no';
+        replyText = 'Understood, shaking my head no.';
+      } else if (/\b(look|scan|around|room)\b/.test(low)) {
+        g = 'look_around';
+        replyText = 'Scanning the room within my ±45 degree pan and ±23 degree tilt neck envelope.';
+      } else if (/\b(point|left)\b/.test(low)) {
+        g = 'point_left';
+        replyText = 'Pointing to the left now.';
+      } else if (/\b(right)\b/.test(low)) {
+        g = 'point_right';
+        replyText = 'Pointing to the right now.';
+      } else if (/\b(hand|finger|inspect)\b/.test(low)) {
+        g = 'inspect';
+        replyText = 'Inspecting my RH56 fingers and parallel wrist bounds.';
+      } else if (/\b(think|wonder|hmm|remember)\b/.test(low)) {
+        g = 'think';
+        replyText = 'Anchored in Trellis memory — thinking it through.';
+      } else if (/\b(celebrate|yay|awesome|win)\b/.test(low)) {
+        g = 'celebrate';
+        replyText = 'Let’s go! Celebrating safely inside hardware limits.';
+      }
+      rData = { ok: true, reply: replyText, gesture: g, invokedSkill: matchedSkill?.name || null, llm: 'browser-sim', timings: { llm_ms: 1 } };
+    }
     timings.llm = rData.timings?.llm_ms;
 
     const reply = rData.reply;
@@ -586,24 +634,28 @@ async function runConversationTurn({ text = null, wavBlob = null }) {
 
     // 6. Synthesize & play Luka's voice with WebAudio RMS driving visor + gestures
     if ($('audioOutCheck').checked) {
-      const selVoice = $('voiceSelect').value || '';
-      const [vProvider, vName] = selVoice.includes(':') ? selVoice.split(':') : [undefined, selVoice];
-      try {
-        const ttsRes = await fetch('/sim-api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: reply, provider: vProvider, voice: vName }),
-        });
-        const tData = await ttsRes.json();
-        if (ttsRes.ok && tData.ok && tData.audioBase64) {
-          state.lastAudioBase64 = tData.audioBase64;
-          $('replayBtn').disabled = false;
-          await playWavBase64(tData.audioBase64);
-        } else {
+      if (isStaticBuild) {
+        await speakBrowserFallback(reply);
+      } else {
+        const selVoice = $('voiceSelect').value || '';
+        const [vProvider, vName] = selVoice.includes(':') ? selVoice.split(':') : [undefined, selVoice];
+        try {
+          const ttsRes = await fetch('/sim-api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: reply, provider: vProvider, voice: vName }),
+          });
+          const tData = await ttsRes.json();
+          if (ttsRes.ok && tData.ok && tData.audioBase64) {
+            state.lastAudioBase64 = tData.audioBase64;
+            $('replayBtn').disabled = false;
+            await playWavBase64(tData.audioBase64);
+          } else {
+            await speakBrowserFallback(reply);
+          }
+        } catch {
           await speakBrowserFallback(reply);
         }
-      } catch {
-        await speakBrowserFallback(reply);
       }
     } else {
       // Visual-only speaking duration if muted
@@ -766,6 +818,21 @@ function renderTrellisPanels() {
 /* ----------------------------------------------------- Health & Voice UI */
 
 async function loadHealthAndVoices() {
+  if (isStaticBuild) {
+    const llmSel = $('llmSelect');
+    if (llmSel) {
+      llmSel.innerHTML = '';
+      llmSel.add(new Option('Browser Embodied Sim', 'browser-sim'));
+    }
+    const sel = $('voiceSelect');
+    if (sel) {
+      sel.innerHTML = '';
+      sel.add(new Option('Browser Speech Synthesis', 'browser:default'));
+    }
+    $('speechPill').textContent = 'SPEECH BROWSER SIM';
+    $('speechDot').className = 'dot on-cyan';
+    return;
+  }
   try {
     const [hRes, vRes] = await Promise.all([
       fetch('/sim-api/health', { cache: 'no-store' }),
@@ -1055,7 +1122,7 @@ function wireUI() {
 
   $('voiceSelect').addEventListener('change', () => {
     const val = $('voiceSelect').value;
-    if (!val.includes(':')) return;
+    if (isStaticBuild || !val.includes(':')) return;
     const [provider, voice] = val.split(':');
     fetch('/sim-api/voice-profile', {
       method: 'POST',
@@ -1224,6 +1291,83 @@ function wireUI() {
     state.motion.clearManualOverrides();
   });
 
+  // Actuator Hardware Safety Profile switcher + Soft Hold + Dry-Run Packet Inspector
+  const syncSafetyProfileUI = () => {
+    const prof = state.motion.getSafetyProfile();
+    document.querySelectorAll('[data-safety-profile]').forEach((b) => {
+      b.classList.toggle('active', b.dataset.safetyProfile === prof.id);
+    });
+    const yawLim = state.model.limits('idx27_head_joint1');
+    const pitchLim = state.model.limits('idx28_head_joint2');
+    const yawDeg = Math.round((yawLim?.upper ?? 0.785) / DEG);
+    const pUpDeg = Math.round((pitchLim?.upper ?? 0.401) / DEG);
+    const pDnDeg = Math.round(Math.abs(pitchLim?.lower ?? -0.401) / DEG);
+    if ($('hpTop')) $('hpTop').textContent = `UP +${pUpDeg}°`;
+    if ($('hpBot')) $('hpBot').textContent = `DOWN -${pDnDeg}°`;
+    if ($('hpLeft')) $('hpLeft').textContent = `← -${yawDeg}°`;
+    if ($('hpRight')) $('hpRight').textContent = `+${yawDeg}° →`;
+
+    // Sync slider min/max bounds to match active hardware safety profile
+    document.querySelectorAll('#jointSliders input[data-joint]').forEach((el) => {
+      const lim = state.model.limits(el.dataset.joint);
+      if (!lim) return;
+      el.min = String(Math.round((lim.lower ?? -1.5) / DEG));
+      el.max = String(Math.round((lim.upper ?? 1.5) / DEG));
+    });
+  };
+
+  const toggleSoftHold = (forceVal = null) => {
+    const next = forceVal === null ? !state.motion.isSoftHold() : Boolean(forceVal);
+    state.motion.setSoftHold(next);
+    $('softHoldBtn')?.classList.toggle('active', next);
+    if ($('softHoldBtn')) $('softHoldBtn').textContent = next ? 'HELD (RESUME)' : 'SOFT HOLD';
+    if ($('btnSoftHoldCard')) $('btnSoftHoldCard').textContent = next ? 'Resume Motion (H)' : 'Soft Hold (H)';
+    if (next) appendMessage('system', 'SOFT HOLD latched — all upper-body targets frozen in place (sim only; physical e-stop remains primary on hardware).');
+  };
+
+  document.querySelectorAll('[data-safety-profile]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.motion.setSafetyProfile(btn.dataset.safetyProfile);
+      syncSafetyProfileUI();
+      const prof = state.motion.getSafetyProfile();
+      appendMessage('system', `Safety envelope switched to ${prof.label}: ${prof.description}`);
+    });
+  });
+
+  $('safetyPillBtn')?.addEventListener('click', () => {
+    document.querySelector('.tab[data-tab="skills"]')?.click();
+  });
+
+  $('softHoldBtn')?.addEventListener('click', () => toggleSoftHold());
+  $('btnSoftHoldCard')?.addEventListener('click', () => toggleSoftHold());
+
+  window.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+    if (e.code === 'KeyH' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      toggleSoftHold();
+    }
+  });
+
+  $('btnDryRunPacket')?.addEventListener('click', () => {
+    const box = $('dryRunBox');
+    if (!box) return;
+    const pkt = simPoseToHardwarePacket(state.motion.pose, state.motion.hands);
+    const neckCheck = validateHardwareCommandPacket(pkt, { allowArms: false });
+    const armCheck = validateHardwareCommandPacket(pkt, { allowArms: true });
+    box.hidden = false;
+    box.textContent = [
+      `DRY-RUN WIRE PREVIEW (physical writes CLOSED)`,
+      `neck [VERIFIED]: shake=${pkt.neck.shake.toFixed(4)} rad  nod=${pkt.neck.nod.toFixed(4)} rad (-UP flipped)  valid=${neckCheck.ok ? 'PASS' : 'REFUSED'}`,
+      `arms [BLOCKED]:  ${pkt.arms.unverifiedJoints.length}/14 joints unverified (${armCheck.errors.length} gated)`,
+      `  L: j13=${pkt.arms.positions.idx13_left_arm_joint1.toFixed(2)} j14=${pkt.arms.positions.idx14_left_arm_joint2.toFixed(2)} j16=${pkt.arms.positions.idx16_left_arm_joint4.toFixed(2)} j18=${pkt.arms.positions.idx18_left_arm_joint6.toFixed(2)} j19=${pkt.arms.positions.idx19_left_arm_joint7.toFixed(2)}`,
+      `  R: j20=${pkt.arms.positions.idx20_right_arm_joint1.toFixed(2)} j21=${pkt.arms.positions.idx21_right_arm_joint2.toFixed(2)} j23=${pkt.arms.positions.idx23_right_arm_joint4.toFixed(2)} j25=${pkt.arms.positions.idx25_right_arm_joint6.toFixed(2)} j26=${pkt.arms.positions.idx26_right_arm_joint7.toFixed(2)}`,
+      `hands [0..2000]: L=[${Object.values(pkt.hands.left).join(',')}]`,
+      `                 R=[${Object.values(pkt.hands.right).join(',')}]`,
+    ].join('\n');
+  });
+
+  syncSafetyProfileUI();
+
   // Look at Cursor toggle in viewport camera bar
   $('cursorGazeBtn')?.addEventListener('click', () => {
     state.cursorGaze = !state.cursorGaze;
@@ -1234,17 +1378,21 @@ function wireUI() {
     }
   });
 
-  // 2D Interactive Head Pan & Tilt Gimbal Pad
+  // 2D Interactive Head Pan & Tilt Gimbal Pad (adapts dynamically to active safety profile limits)
   const headPad = $('headPad');
   function applyHeadPadEvent(e) {
     if (!headPad || !state.motion) return;
     const rect = headPad.getBoundingClientRect();
     const nx = clamp((e.clientX - rect.left) / Math.max(rect.width, 1), 0, 1);
     const ny = clamp((e.clientY - rect.top) / Math.max(rect.height, 1), 0, 1);
-    // Horizontal: 0 = left (-75° / -1.31 rad), 1 = right (+75° / +1.31 rad)
-    // Vertical:   0 = top  (+35° / +0.61 rad), 1 = bottom (-33° / -0.58 rad)
-    const yaw = (nx * 2 - 1) * 1.31;
-    const pitch = (1 - ny) * (0.61 + 0.58) - 0.58;
+    const yawLim = state.model.limits('idx27_head_joint1');
+    const pitchLim = state.model.limits('idx28_head_joint2');
+    const yawLo = yawLim?.lower ?? -0.785;
+    const yawHi = yawLim?.upper ?? 0.785;
+    const pLo = pitchLim?.lower ?? -0.401;
+    const pHi = pitchLim?.upper ?? 0.401;
+    const yaw = yawLo + nx * (yawHi - yawLo);
+    const pitch = pLo + (1 - ny) * (pHi - pLo);
     state.cursorGaze = false;
     $('cursorGazeBtn')?.classList.remove('active');
     headPad.classList.add('active');
@@ -1319,8 +1467,10 @@ function wireUI() {
       const rect = canvas.getBoundingClientRect();
       const nx = clamp((e.clientX - rect.left) / Math.max(rect.width, 1), 0, 1);
       const ny = clamp((e.clientY - rect.top) / Math.max(rect.height, 1), 0, 1);
-      const yaw = (nx * 2 - 1) * 1.24;
-      const pitch = clamp((0.46 - ny) * 1.28, -0.56, 0.60);
+      const yawLim = state.model.limits('idx27_head_joint1');
+      const pitchLim = state.model.limits('idx28_head_joint2');
+      const yaw = (nx * 2 - 1) * (yawLim?.upper ?? 0.785);
+      const pitch = clamp((0.46 - ny) * 1.15, pitchLim?.lower ?? -0.401, pitchLim?.upper ?? 0.401);
       state.motion.setHeadGazeOverride(yaw, pitch);
     }
   });
@@ -1356,12 +1506,14 @@ function updateTrackingReadout(tracked) {
   $('handsVal').textContent = `${tracked.handCount} / 2`;
 
   const j = tracked.joints;
+  const ts = tracked.trackingState;
   const deg = (v) => `${Math.round((v || 0) / DEG)}°`;
+  const armTag = (s) => (s === 'LOCKED' ? 'LOCK' : (s || 'LOCK'));
   $('trackTelemetry').innerHTML = [
     ['Head Yaw', deg(j.idx27_head_joint1)],
     ['Head Pitch', deg(j.idx28_head_joint2)],
-    ['L Shldr Pitch', deg(j.idx14_left_arm_joint2)],
-    ['R Shldr Pitch', deg(j.idx21_right_arm_joint2)],
+    ['L Arm', ts ? `${armTag(ts.leftArm)} · ${deg(j.idx14_left_arm_joint2)}` : deg(j.idx14_left_arm_joint2)],
+    ['R Arm', ts ? `${armTag(ts.rightArm)} · ${deg(j.idx21_right_arm_joint2)}` : deg(j.idx21_right_arm_joint2)],
     ['L Elbow', deg(j.idx16_left_arm_joint4)],
     ['R Elbow', deg(j.idx23_right_arm_joint4)],
   ].map(([k, v]) => `<div class="kv-box"><span>${k}</span><b>${v}</b></div>`).join('');
@@ -1429,13 +1581,19 @@ function tick(now) {
   state.renderer.setVisorFx(stepOut.visorFx);
   state.renderer.draw(state.matrices, state.colors, state.materials);
 
-  // Smooth 60Hz update for 2D Head Pan & Tilt gimbal pad reticle
+  // Smooth 60Hz update for 2D Head Pan & Tilt gimbal pad reticle (scaled to active profile bounds)
   const liveDot = $('headLiveDot');
   if (liveDot) {
+    const yawLim = state.model.limits('idx27_head_joint1');
+    const pitchLim = state.model.limits('idx28_head_joint2');
+    const yawLo = yawLim?.lower ?? -0.785;
+    const yawHi = yawLim?.upper ?? 0.785;
+    const pLo = pitchLim?.lower ?? -0.401;
+    const pHi = pitchLim?.upper ?? 0.401;
     const yaw = stepOut.pose.idx27_head_joint1 || 0;
     const pitch = stepOut.pose.idx28_head_joint2 || 0;
-    const lx = clamp(0.5 + (yaw / 1.32) * 0.5, 0.04, 0.96) * 100;
-    const ly = clamp(1 - (pitch + 0.58) / (0.62 + 0.58), 0.06, 0.94) * 100;
+    const lx = clamp((yaw - yawLo) / Math.max(yawHi - yawLo, 1e-4), 0.04, 0.96) * 100;
+    const ly = clamp(1 - (pitch - pLo) / Math.max(pHi - pLo, 1e-4), 0.06, 0.94) * 100;
     liveDot.style.left = `${lx.toFixed(1)}%`;
     liveDot.style.top = `${ly.toFixed(1)}%`;
 
@@ -1444,8 +1602,8 @@ function tick(now) {
       const ov = state.motion.headGazeOverride;
       tgtDot.hidden = !ov;
       if (ov) {
-        const tx = clamp(0.5 + (ov.yaw / 1.32) * 0.5, 0.04, 0.96) * 100;
-        const ty = clamp(1 - (ov.pitch + 0.58) / (0.62 + 0.58), 0.06, 0.94) * 100;
+        const tx = clamp((ov.yaw - yawLo) / Math.max(yawHi - yawLo, 1e-4), 0.04, 0.96) * 100;
+        const ty = clamp(1 - (ov.pitch - pLo) / Math.max(pHi - pLo, 1e-4), 0.06, 0.94) * 100;
         tgtDot.style.left = `${tx.toFixed(1)}%`;
         tgtDot.style.top = `${ty.toFixed(1)}%`;
       }
@@ -1489,6 +1647,51 @@ function tick(now) {
         const openPct = Math.round((1 - curl) * 100);
         bar.style.height = `${Math.max(8, openPct)}%`;
       });
+    }
+
+    // Update live Hardware Safety Envelope HUD
+    if (stepOut.safety) {
+      const sf = stepOut.safety;
+      const shortName = sf.softHold ? 'HOLD' : (sf.profileId === 'bringup' ? 'BRING-UP' : sf.profileId === 'hardware' ? 'HW SPEC' : 'STUDIO');
+      if ($('safetyPill')) $('safetyPill').textContent = shortName;
+      if ($('safetyDot')) {
+        $('safetyDot').className = `dot ${sf.softHold ? 'danger' : (!sf.hardwareEnforced || sf.status === 'CLAMPING' ? 'warn' : 'on')}`;
+      }
+      if ($('safetyStatusBadge')) {
+        $('safetyStatusBadge').textContent = sf.status;
+        $('safetyStatusBadge').className = `badge ${sf.softHold ? 'hold' : (sf.status === 'CLAMPING' || !sf.hardwareEnforced ? 'warn' : 'live')}`;
+      }
+      if ($('safeSpdBar')) {
+        $('safeSpdBar').style.width = `${clamp(sf.peakSpeedPct, 0, 100)}%`;
+        $('safeSpdBar').classList.toggle('warn', sf.peakSpeedPct >= 80);
+        $('safeSpdVal').textContent = `${sf.peakSpeedRadS.toFixed(2)} r/s`;
+      }
+      if ($('safeAccBar')) {
+        $('safeAccBar').style.width = `${clamp(sf.peakAccelPct, 0, 100)}%`;
+        $('safeAccBar').classList.toggle('warn', sf.peakAccelPct >= 80);
+        $('safeAccVal').textContent = `${sf.peakAccelRadS2.toFixed(1)} r/s²`;
+      }
+      if ($('safeWristLBar')) {
+        $('safeWristLBar').style.width = `${clamp(sf.wristLoadL, 0, 100)}%`;
+        $('safeWristLBar').classList.toggle('warn', sf.wristLoadL >= 90);
+        $('safeWristLVal').textContent = `${sf.wristLoadL}%`;
+      }
+      if ($('safeWristRBar')) {
+        $('safeWristRBar').style.width = `${clamp(sf.wristLoadR, 0, 100)}%`;
+        $('safeWristRBar').classList.toggle('warn', sf.wristLoadR >= 90);
+        $('safeWristRVal').textContent = `${sf.wristLoadR}%`;
+      }
+      if ($('safetyClampsNote')) {
+        if (sf.softHold) {
+          $('safetyClampsNote').textContent = 'SOFT HOLD ACTIVE · targets frozen at current pose';
+        } else if (!sf.hardwareEnforced) {
+          $('safetyClampsNote').textContent = 'STUDIO WIDE (SIM ONLY) · exceeds real neck/wrist hardware limits';
+        } else if (sf.activeClamps.length) {
+          $('safetyClampsNote').textContent = `Envelope limiting: ${sf.activeClamps.slice(0, 3).join(', ')}`;
+        } else {
+          $('safetyClampsNote').textContent = `All joints inside AimDK §7.1.5–9 (${sf.profileLabel}) · physical writes closed`;
+        }
+      }
     }
 
     if (tracked) updateTrackingReadout(tracked);

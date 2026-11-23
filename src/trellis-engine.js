@@ -386,7 +386,12 @@ export class TrellisEngine {
     }
   }
 
+  _isStaticBuild() {
+    return typeof document !== 'undefined' && document.querySelector?.('meta[name="luka-env"]')?.content === 'static';
+  }
+
   async hydrateFromDisk(baseUrl = '') {
+    if (this._isStaticBuild()) return false;
     try {
       const res = await fetch(`${baseUrl}/sim-api/trellis/state`, { cache: 'no-store' });
       if (!res.ok) return false;
@@ -425,7 +430,7 @@ export class TrellisEngine {
     } catch {
       /* quota exceeded */
     }
-    if (typeof fetch === 'function') {
+    if (typeof fetch === 'function' && !this._isStaticBuild()) {
       clearTimeout(this._syncTimer);
       this._syncTimer = setTimeout(() => {
         fetch('/sim-api/trellis/sync', {

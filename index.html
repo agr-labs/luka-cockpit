@@ -1,217 +1,378 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Steadwell · Luka A2 Ultra Cockpit</title>
-<link rel="stylesheet" href="./styles.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#05070b" />
+  <title>Steadwell · Luka v. A2U</title>
+  <link rel="stylesheet" href="./landing.css" />
 </head>
-<body data-mode="MANUAL">
-  <div id="banner" class="banner"></div>
-
-  <div id="boot" class="boot">
-    <div class="bootbox">
-      <div class="bootmark"></div>
-      <div class="boottitle">LUKA · A2 ULTRA</div>
-      <div id="bootMsg" class="bootmsg">starting…</div>
-      <div class="bootbar"><i id="bootBar"></i></div>
-      <div id="bootHint" class="boothint">estimated twin · not calibrated to the hardware</div>
-    </div>
+<body>
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop-glow"></div>
+    <div class="backdrop-grid"></div>
   </div>
 
-  <header class="topbar">
-    <div class="brand">
-      <span class="mark"></span>
-      <div>
-        <strong>STEADWELL</strong>
-        <small>LUKA · A2 ULTRA TWIN COCKPIT</small>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="wrap topbar-inner">
+        <a class="brand" href="./" aria-label="Steadwell Luka Home">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+          <span class="brand-text">
+            <strong>STEADWELL</strong>
+            <small>LUKA · v. A2U</small>
+          </span>
+        </a>
+
+        <nav class="nav-links" aria-label="Sections">
+          <a href="#simulation">Simulation</a>
+          <a href="#operations">Operations</a>
+          <a href="#telemetry">Telemetry</a>
+        </nav>
+
+        <div class="top-right">
+          <span class="suite-pill" title="Live local suite status">
+            <i id="suiteStatusDot" class="pulse-dot" data-state="sim"></i>
+            <span id="suiteStatusText">CHECKING SUITE…</span>
+          </span>
+          <a href="./luka-sim.html" class="btn btn-primary btn-compact">
+            Open Sim <span class="arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
       </div>
-    </div>
-    <div class="topmeta">
-      <span><i id="linkDot" class="dot"></i>LINK</span>
-      <span><i id="deadmanDot" class="dot"></i>DEADMAN</span>
-      <span><i id="estopDot" class="dot"></i>STOP</span>
-      <span class="sep"></span>
-      <span id="envBadge" class="chip env" data-env="sim">SIM</span>
-      <span id="rendererKind" class="chip">…</span>
-      <span id="fps" class="chip">– fps</span>
-      <span id="tris" class="chip">– tris</span>
-      <a href="./luka-sim.html" class="chip" style="text-decoration:none;color:#38d9f5;border-color:rgba(56,217,245,0.4)">Upper-Body Sim ↗</a>
-    </div>
-  </header>
+    </header>
 
-  <main class="grid">
-    <aside class="rail left">
-      <section class="card">
-        <h2>Control authority</h2>
-        <div id="modeState" class="statemachine" data-state="MANUAL">MANUAL</div>
-        <p class="hint">Local preconditions, not a manufacturer arbitration mechanism.</p>
-        <div class="btncol">
-          <button id="btnArm" class="btn">ARM</button>
-          <button id="btnEngage" class="btn">ENGAGE COMPUTER</button>
-          <button id="btnHandoff" class="btn">SAFE HANDOFF</button>
+    <main>
+      <!-- HERO -->
+      <section class="hero" id="heroSection" data-animation-active="true">
+        <div class="wrap hero-grid">
+          <div>
+            <div class="eyebrow"><i></i>LUKA · v. A2U</div>
+            <h1 class="hero-title word-reveal" data-word-reveal>
+              Luka v. A2U.<br />
+              <span class="muted-line">Every studio in one place.</span>
+            </h1>
+            <p class="hero-sub">
+              Launch embodied upper-body simulation, 52-DOF full-body kinematics, live voice dialogue,
+              and bounded hardware operations from one quiet workspace.
+            </p>
+            <div class="hero-actions">
+              <a href="./luka-sim.html" class="btn btn-primary">
+                Launch Upper-Body Sim <span class="arrow" aria-hidden="true">→</span>
+              </a>
+              <a href="./cockpit.html" class="btn">
+                Full-Body Cockpit <span class="arrow" aria-hidden="true">↗</span>
+              </a>
+            </div>
+            <div class="hero-metrics">
+              <div class="metric">
+                <b id="metricOnline">2 / 8</b>
+                <span>Apps reachable</span>
+              </div>
+              <div class="metric">
+                <b>16 + 10 DOF</b>
+                <span>Upper body &amp; RH56 hands</span>
+              </div>
+              <div class="metric">
+                <b>AimDK §7.1</b>
+                <span>Hardware envelope default</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Obsidian OLED Visor Medallion -->
+          <div class="visor-stage" aria-label="Luka obsidian OLED head preview">
+            <div class="visor-orbit-wrap">
+              <div class="orbit-ring outer" aria-hidden="true"></div>
+              <div class="orbit-ring mid" aria-hidden="true"><span class="orbit-node"></span></div>
+              <div class="orbit-ring inner" aria-hidden="true"></div>
+
+              <div class="luka-head-shell">
+                <div class="luka-visor-glass">
+                  <div class="oled-eyes" id="oledEyes">
+                    <span class="oled-eye"></span>
+                    <span class="oled-eye"></span>
+                  </div>
+                  <div class="oled-wave" aria-hidden="true">
+                    <i></i><i></i><i></i><i></i><i></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="visor-caption">
+              <strong>HEAD_LINK02 · OBSIDIAN OLED</strong>
+              <span>±45° PAN · ±23° TILT</span>
+            </div>
+          </div>
         </div>
-        <button id="btnEstop" class="btn estop">SOFTWARE STOP</button>
-        <p class="hint stopnote">Unverified — this does not reach the manufacturer's safety system. Use the factory e-stop.</p>
-        <button id="btnClear" class="btn ghost">clear e-stop</button>
-        <button id="deadman" class="btn deadman">HOLD DEADMAN <kbd>space</kbd></button>
-        <div class="meters">
-          <div><span>commands</span><b id="cmdCount">0</b></div>
-          <div><span>rejections</span><b id="rejCount">0</b></div>
-        </div>
-        <div id="watchdog" class="watchdog">watchdog idle</div>
-        <div id="lastReject" class="reject"></div>
       </section>
 
-      <section class="card">
-        <h2>Luka link <span id="linkMode" class="tag" data-mode="offline">OFFLINE</span></h2>
-        <div id="linkBody" class="kvlist"><div class="kv"><span>endpoint</span><b>—</b></div></div>
-        <div class="btnrow">
-          <button id="btnLink" class="btn small">connect live</button>
-          <button id="btnMock" class="btn small ghost">mock</button>
+      <!-- SECTION 01: SIMULATION & DIGITAL TWINS -->
+      <section class="section-band apps-section" id="simulation">
+        <span class="corner-mark tl" aria-hidden="true"></span>
+        <span class="corner-mark tr" aria-hidden="true"></span>
+        <div class="wrap">
+
+          <div class="section-head">
+            <div>
+              <span class="section-index">01 · SIMULATION &amp; DIGITAL TWINS</span>
+              <h2>Interactive Robotics Studios</h2>
+            </div>
+            <p class="section-note">Run directly in the browser with WebGPU / WebGL2 and zero physical writes.</p>
+          </div>
+
+          <div class="featured-grid">
+            <a class="app-card featured primary-accent reveal-card" href="./luka-sim.html" data-app-index="1" style="--card-i:0">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="4" y="4" width="16" height="10" rx="4" />
+                      <circle cx="9.5" cy="9" r="1.2" fill="currentColor" stroke="none" />
+                      <circle cx="14.5" cy="9" r="1.2" fill="currentColor" stroke="none" />
+                      <path d="M8 20v-3a4 4 0 0 1 8 0v3" />
+                    </svg>
+                  </span>
+                  <span class="card-num">01</span>
+                </div>
+                <span class="status-tag" data-status="ready"><i></i><span>READY</span></span>
+              </div>
+
+              <div class="card-body">
+                <h3>Luka Upper-Body Sim</h3>
+                <p>
+                  Embodied Luka v. A2U upper-body twin with obsidian OLED head, Whisper + Inworld speech,
+                  Kameyoko webcam hand/arm mirroring, Trellis memory, and real AimDK actuator limits.
+                </p>
+                <div class="tag-row">
+                  <span class="micro-tag">Speech ASR/TTS</span>
+                  <span class="micro-tag">Kameyoko Vision</span>
+                  <span class="micro-tag">Trellis Context</span>
+                  <span class="micro-tag">HW Safety HUD</span>
+                </div>
+              </div>
+
+              <div class="card-foot">
+                <span>/luka-sim.html</span>
+                <span class="card-launch">Launch <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+
+            <a class="app-card featured reveal-card" href="./cockpit.html" data-app-index="2" style="--card-i:1">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="5" r="2.5" />
+                      <path d="M12 7.5v6.5" />
+                      <path d="M7 10.5h10" />
+                      <path d="M12 14l-3.5 6.5" />
+                      <path d="M12 14l3.5 6.5" />
+                    </svg>
+                  </span>
+                  <span class="card-num">02</span>
+                </div>
+                <span class="status-tag" data-status="ready"><i></i><span>READY</span></span>
+              </div>
+
+              <div class="card-body">
+                <h3>Full-Body A2U Cockpit</h3>
+                <p>
+                  Complete 52-DOF bipedal digital twin with manual joint inspector, recorded motion choreography,
+                  authority state machine, and read-only AimDK hardware telemetry link.
+                </p>
+                <div class="tag-row">
+                  <span class="micro-tag">52-DOF Twin</span>
+                  <span class="micro-tag">WebGPU / WebGL2</span>
+                  <span class="micro-tag">Recordings</span>
+                  <span class="micro-tag">Read-Only Link</span>
+                </div>
+              </div>
+
+              <div class="card-foot">
+                <span>/cockpit.html</span>
+                <span class="card-launch">Launch <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+          </div>
         </div>
-        <div class="field">
-          <label for="convention">joint convention</label>
-          <select id="convention">
-            <option value="raw">as reported</option>
-            <option value="flip2">flip joint 2</option>
-            <option value="flip2_5">flip joint 2 + 5</option>
-            <option value="offset2">joint 2 ∓90°</option>
-          </select>
-        </div>
-        <div class="btnrow">
-          <button id="btnReference" class="btn small">capture reference pose</button>
-          <button id="btnClearRef" class="btn small ghost">clear</button>
-        </div>
-        <p id="referenceNote" class="hint">With his arms hanging, capture a reference. The twin then mirrors movement *relative* to that pose instead of assuming the model's zero.</p>
-        <p id="conventionNote" class="hint">Measured angles may not share the model's sign convention. If the arms cross the body, pick a different convention.</p>
-        <p id="linkNote" class="hint">Read-only <code>McActionService/GetAction</code> at 0.2 Hz.</p>
       </section>
 
-      <section class="card">
-        <h2>Joint calibration <span id="calState" class="tag">…</span></h2>
-        <p class="hint">The captured pose becomes the twin's neutral. Legs use absolute URDF angles; arms and head use offsets. If a joint moves the wrong way, flip its sign.</p>
-        <div class="btnrow">
-          <button id="btnCalCapture" class="btn small">capture current pose</button>
-          <button id="btnCalReset" class="btn small ghost">use shared</button>
-          <button id="btnCalDownload" class="btn small ghost">download</button>
+      <!-- SECTION 02: LIVE OPERATIONS, VOICE & TELEMETRY -->
+      <section class="section-band apps-section" id="operations">
+        <span class="corner-mark tl" aria-hidden="true"></span>
+        <span class="corner-mark tr" aria-hidden="true"></span>
+        <div class="wrap">
+
+          <div class="section-head" id="telemetry">
+            <div>
+              <span class="section-index">02 · LIVE OPERATIONS, VOICE &amp; SENSORS</span>
+              <h2>Gateway, Voice &amp; Field Consoles</h2>
+            </div>
+            <p class="section-note">Local services on Gateway (:8788) and Luka Bridge (:8791) with live status.</p>
+          </div>
+
+          <div class="ops-grid">
+            <a class="app-card reveal-card" href="http://127.0.0.1:8788/" data-service="gateway" data-path="/" data-app-index="3" style="--card-i:0">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                  </span>
+                  <span class="card-num">03</span>
+                </div>
+                <span class="status-tag" data-service-badge="gateway"><i></i><span>CHECKING</span></span>
+              </div>
+              <div class="card-body">
+                <h3>Robot Gateway</h3>
+                <p>Lease-gated capability control plane, safety contract verification, software stop, and audit log.</p>
+              </div>
+              <div class="card-foot">
+                <span data-endpoint>:8788/</span>
+                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+
+            <a class="app-card reveal-card" href="http://127.0.0.1:8791/chat" data-service="bridge" data-path="/chat" data-app-index="4" style="--card-i:1">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </span>
+                  <span class="card-num">04</span>
+                </div>
+                <span class="status-tag" data-service-badge="bridge"><i></i><span>CHECKING</span></span>
+              </div>
+              <div class="card-body">
+                <h3>LukaChat</h3>
+                <p>Focused speech &amp; controller conversation interface with hardware-verified ±10°/±5° head jog controls.</p>
+              </div>
+              <div class="card-foot">
+                <span data-endpoint>:8791/chat</span>
+                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+
+            <a class="app-card reveal-card" href="http://127.0.0.1:8788/voice.html" data-service="gateway" data-path="/voice.html" data-app-index="5" style="--card-i:2">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                  </span>
+                  <span class="card-num">05</span>
+                </div>
+                <span class="status-tag" data-service-badge="gateway"><i></i><span>CHECKING</span></span>
+              </div>
+              <div class="card-body">
+                <h3>Voice Console</h3>
+                <p>Push-to-talk speech pipeline diagnostics, provider readiness checks, and bounded turn inspection.</p>
+              </div>
+              <div class="card-foot">
+                <span data-endpoint>:8788/voice.html</span>
+                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+
+            <a class="app-card reveal-card" href="http://127.0.0.1:8791/" data-service="bridge" data-path="/" data-app-index="6" style="--card-i:3">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M2 12h3l2-6 4 12 3-8 2 2h6" />
+                    </svg>
+                  </span>
+                  <span class="card-num">06</span>
+                </div>
+                <span class="status-tag" data-service-badge="bridge"><i></i><span>CHECKING</span></span>
+              </div>
+              <div class="card-body">
+                <h3>Audio + Transcript</h3>
+                <p>Live Orin audio monitor, Whisper transcript stream, Inworld voice switcher, and head panel.</p>
+              </div>
+              <div class="card-foot">
+                <span data-endpoint>:8791/</span>
+                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+
+            <a class="app-card reveal-card" href="http://127.0.0.1:8788/lidar.html" data-service="gateway" data-path="/lidar.html" data-app-index="7" style="--card-i:4">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="9" />
+                      <circle cx="12" cy="12" r="4.5" />
+                      <line x1="12" y1="3" x2="12" y2="12" />
+                    </svg>
+                  </span>
+                  <span class="card-num">07</span>
+                </div>
+                <span class="status-tag" data-service-badge="gateway"><i></i><span>CHECKING</span></span>
+              </div>
+              <div class="card-body">
+                <h3>LiDAR Space</h3>
+                <p>Real-time 3D point-cloud viewport with live-frame streaming and persistent room accumulation.</p>
+              </div>
+              <div class="card-foot">
+                <span data-endpoint>:8788/lidar.html</span>
+                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+
+            <a class="app-card reveal-card" href="http://127.0.0.1:8788/room.html" data-service="gateway" data-path="/room.html" data-app-index="8" style="--card-i:5">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+                      <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                      <circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none" />
+                    </svg>
+                  </span>
+                  <span class="card-num">08</span>
+                </div>
+                <span class="status-tag" data-service-badge="gateway"><i></i><span>CHECKING</span></span>
+              </div>
+              <div class="card-body">
+                <h3>Room Sensors</h3>
+                <p>Ground-truth host microphone dBFS and camera presence telemetry streamed into the gateway.</p>
+              </div>
+              <div class="card-foot">
+                <span data-endpoint>:8788/room.html</span>
+                <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+          </div>
         </div>
-        <details id="calDetails">
-          <summary>joint offsets &amp; directions</summary>
-          <div id="calList" class="cal-list"></div>
-        </details>
-        <p id="calNote" class="hint"></p>
-        <div id="handReadout" class="handread"></div>
       </section>
+    </main>
 
-      <section class="card grow">
-        <h2>Event log</h2>
-        <div id="logList" class="log"></div>
-      </section>
-    </aside>
-
-    <section class="viewport">
-      <canvas id="view"></canvas>
-      <div class="overlay tl">
-        <div class="tagline">LUKA TWIN</div>
-        <div class="tiny">estimated model · 47 meshes · FK checked against MuJoCo, not calibrated to Luka</div>
-        <div id="poseSource" class="tiny posesrc">pose source: playback / operator — no live joint feedback</div>
+    <footer class="footer">
+      <span class="corner-mark tl" aria-hidden="true"></span>
+      <span class="corner-mark tr" aria-hidden="true"></span>
+      <div class="wrap footer-inner">
+        <div class="footer-left">
+          <span>STEADWELL · LUKA v. A2U</span>
+          <span>·</span>
+          <span>PHYSICAL WRITES CLOSED BY DEFAULT</span>
+        </div>
+        <div class="footer-keys">
+          <span>Quick launch:</span>
+          <kbd>1</kbd>–<kbd>8</kbd>
+        </div>
       </div>
-      <div class="overlay bl facts">
-        <div><span>dof</span><b id="dofRead">—</b></div>
-        <div><span>driven</span><b id="actRead">—</b></div>
-        <div><span>mass</span><b id="massRead">—</b></div>
-        <div><span>height</span><b id="heightRead">—</b></div>
-        <div><span>mesh</span><b id="triRead">—</b></div>
-      </div>
-      <div class="overlay br keys">
-        <span>drag / wheel: orbit</span>
-        <span><kbd>space</kbd> deadman</span>
-        <span><kbd>esc</kbd> e-stop</span>
-      </div>
-    </section>
+    </footer>
+  </div>
 
-    <aside class="rail right">
-      <section class="card">
-        <h2>Luka playback <span class="muted tiny">recorded</span></h2>
-        <div class="field">
-          <label for="recSelect">recording</label>
-          <select id="recSelect"></select>
-        </div>
-        <div class="btnrow">
-          <button id="btnPlay" class="btn small">play</button>
-          <select id="speedSelect" class="inline">
-            <option value="0.25">0.25×</option>
-            <option value="0.5">0.5×</option>
-            <option value="1" selected>1×</option>
-            <option value="2">2×</option>
-          </select>
-        </div>
-        <input id="scrub" type="range" min="0" max="1" step="0.0001" value="0" class="scrub">
-        <div id="timeRead" class="mono tiny">—</div>
-        <div id="recMeta" class="tiny muted">—</div>
-        <p class="hint">Joint positions only, from the paired iPad app. Units and frames not independently verified.</p>
-      </section>
-
-      <section class="card">
-        <h2>Test profile <span id="profileState" class="tag" data-mode="offline">UNATTESTED</span></h2>
-        <label class="check"><input type="checkbox" id="attestRig">
-          suspension load-rated · workspace clear · factory e-stop in hand</label>
-        <div class="field">
-          <label for="feetState">feet</label>
-          <select id="feetState">
-            <option value="unknown">unknown</option>
-            <option value="clear">clear of floor</option>
-            <option value="touching">touching floor</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="excursion">excursion cap</label>
-          <select id="excursion">
-            <option value="5">±5°</option>
-            <option value="10" selected>±10°</option>
-            <option value="20">±20°</option>
-          </select>
-        </div>
-        <div class="field"><label>locomotion</label><b id="locoState" class="mono tiny">locked</b></div>
-        <div id="profileNote" class="hint">Arm commands stay refused until this is attested. Locomotion commands do not exist in this build.</div>
-      </section>
-
-      <section class="card">
-        <h2>Arm control <span id="armMode" class="tag" data-mode="offline">DRY RUN</span></h2>
-        <div class="btnrow">
-          <button class="btn small active" data-side="left">left</button>
-          <button class="btn small" data-side="right">right</button>
-          <button id="armZero" class="btn small ghost">zero</button>
-        </div>
-        <div id="armGate" class="armgate">transport not configured</div>
-        <div id="armList" class="armlist"></div>
-        <div id="armPayload" class="tiny mono payload">no command sent</div>
-        <p class="hint">Values are <b>commanded</b>, not measured. Luka exposes no joint feedback on this interface, so there is nothing to compare against yet.</p>
-      </section>
-
-      <section class="card">
-        <h2>Pose presets</h2>
-        <div class="presets">
-          <button class="btn small" data-preset="stand">stand</button>
-          <button class="btn small" data-preset="guard">guard</button>
-          <button class="btn small" data-preset="reach">reach</button>
-          <button class="btn small" data-preset="inspect">inspect</button>
-        </div>
-      </section>
-
-      <section class="card grow">
-        <h2>Joints <span class="muted tiny">deg</span></h2>
-        <div id="joints" class="joints"></div>
-      </section>
-
-      <section class="card">
-        <h2>Provenance</h2>
-        <p id="provenance" class="hint"></p>
-      </section>
-    </aside>
-  </main>
-
-  <script type="module" src="./src/main.js"></script>
+  <script type="module" src="./src/landing.js"></script>
 </body>
 </html>

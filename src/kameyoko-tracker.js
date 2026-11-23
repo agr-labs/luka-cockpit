@@ -8,6 +8,7 @@
 //   - Live skeleton & hand canvas overlay + gesture classifier + synthetic demo mode
 
 import { clamp, lerp } from './mathx.js';
+import { clampRhombicWrist } from './hw-safety.js';
 
 export const P = {
   NOSE: 0,
@@ -118,7 +119,7 @@ export class PointsFilter {
     }
   }
 
-  filter(points, dt) {
+  filter(points, dt, freezeMask = null) {
     const { minCutoff, beta, dCutoff } = this.params;
     return points.map((p, i) => {
       const f = (this.filters[i] ??= [
@@ -126,12 +127,25 @@ export class PointsFilter {
         new OneEuro(minCutoff, beta, dCutoff),
         new OneEuro(minCutoff, beta, dCutoff),
       ]);
+      // Freeze low-confidence / off-screen landmarks so garbage never poisons OneEuro derivative `dx`
+      if (freezeMask && freezeMask.has(i) && f[0].x !== null) {
+        return { x: f[0].x, y: f[1].x, z: f[2].x };
+      }
       return {
         x: f[0].filter(p.x, dt),
         y: f[1].filter(p.y, dt),
         z: f[2].filter(p.z, dt),
       };
     });
+  }
+
+  resetIndices(indices) {
+    for (const i of indices) {
+      const triple = this.filters[i];
+      if (triple) {
+        for (const f of triple) f.reset();
+      }
+    }
   }
 
   reset() {
@@ -231,6 +245,204 @@ export function extractFingerCurls(handWorld, openBaseline = null) {
 
 const REST_ABDUCT_RAD = 0.2618; // 15.0 deg built-in URDF shoulder flare at q = 0
 const DEG_TO_RAD = Math.PI / 180;
+const TWO_PI = Math.PI * 2;
+
+// Calm natural resting upper-body pose used when relaxing smoothly after sustained tracking loss
+export const SAFE_NEUTRAL_JOINTS = Object.freeze({
+  idx27_head_joint1: 0,
+  idx28_head_joint2: 0,
+  idx13_left_arm_joint1: 0.04,
+  idx14_left_arm_joint2: -0.06,
+  idx15_left_arm_joint3: 0,
+  idx16_left_arm_joint4: -0.34,
+  idx17_left_arm_joint5: -0.10,
+  idx18_left_arm_joint6: 0,
+  idx19_left_arm_joint7: 0,
+  idx20_right_arm_joint1: 0.04,
+  idx21_right_arm_joint2: -0.06,
+  idx22_right_arm_joint3: 0,
+  idx23_right_arm_joint4: 0.34,
+  idx24_right_arm_joint5: -0.10,
+  idx25_right_arm_joint6: 0,
+  idx26_right_arm_joint7: 0,
+});
+
+export const SAFE_NEUTRAL_HAND = Object.freeze({
+  thumbOpp: 0.22,
+  thumb: 0.20,
+  index: 0.22,
+  middle: 0.24,
+  ring: 0.26,
+  pinky: 0.28,
+});
+
+const LUKA_LEFT_ARM_JOINTS = [
+  'idx13_left_arm_joint1',
+  'idx14_left_arm_joint2',
+  'idx15_left_arm_joint3',
+  'idx16_left_arm_joint4',
+  'idx17_left_arm_joint5',
+  'idx18_left_arm_joint6',
+  'idx19_left_arm_joint7',
+];
+
+const LUKA_RIGHT_ARM_JOINTS = [
+  'idx20_right_arm_joint1',
+  'idx21_right_arm_joint2',
+  'idx22_right_arm_joint3',
+  'idx23_right_arm_joint4',
+  'idx24_right_arm_joint5',
+  'idx25_right_arm_joint6',
+  'idx26_right_arm_joint7',
+];
+
+const HEAD_JOINTS = ['idx27_head_joint1', 'idx28_head_joint2'];
+const SRC_LEFT_ARM_LANDMARKS = [P.L_ELBOW, P.L_WRIST, P.L_PINKY, P.L_INDEX, P.L_THUMB];
+const SRC_RIGHT_ARM_LANDMARKS = [P.R_ELBOW, P.R_WRIST, P.R_PINKY, P.R_INDEX, P.R_THUMB];
+const FINGER_KEYS = ['thumbOpp', 'thumb', 'index', 'middle', 'ring', 'pinky'];
+
+/** Choose the ±2π-equivalent angle closest to `prev` to prevent atan2 branch-cut whips. */
+function unwrapAngleNear(angle, prev, lo, hi) {
+  let out = angle;
+  if (Number.isFinite(prev)) {
+    while (out - prev > Math.PI) out -= TWO_PI;
+    while (out - prev < -Math.PI) out += TWO_PI;
+  }
+  return clamp(out, lo, hi);
+}
+
+function pointFinite(pt) {
+  return Boolean(pt && Number.isFinite(pt.x) && Number.isFinite(pt.y) && Number.isFinite(pt.z));
+}
+
+function inFrame(pt, margin = 0) {
+  return Boolean(pt && pt.x >= -margin && pt.x <= 1 + margin && pt.y >= -margin && pt.y <= 1 + margin);
+}
+
+/** Validate a 21-point hand detection for anatomical plausibility and in-frame presence. */
+export function isHandPlausible(hand) {
+  if (!hand?.image || hand.image.length < 21 || !hand?.world || hand.world.length < 21) return false;
+  if (typeof hand.score === 'number' && hand.score < 0.50) return false;
+  const wi = hand.image[0];
+  const hw = hand.world;
+  if (!pointFinite(wi) || !inFrame(wi, 0.03)) return false;
+  if (!pointFinite(hw[0]) || !pointFinite(hw[5]) || !pointFinite(hw[9]) || !pointFinite(hw[17])) return false;
+  const palmW = dist3(hw[5], hw[17]);
+  const palmL = dist3(hw[0], hw[9]);
+  // Reject collapsed or hallucinated macro-hands (real human palm ~0.05..0.12 m)
+  if (palmW < 0.025 || palmW > 0.17 || palmL < 0.03 || palmL > 0.19) return false;
+  return true;
+}
+
+/**
+ * Assess per-arm, head, and torso landmark quality on raw MediaPipe frames BEFORE filtering.
+ * Uses hysteresis (`wasLocked`), in-frame bounds, anatomical bone-length checks, and
+ * single-frame teleport rejection so occlusion or off-screen limbs never drive berserk jumps.
+ */
+export function assessPoseTrackingQuality(poseFrame, prevState = null, dtSec = 1 / 30) {
+  const w = poseFrame?.world;
+  const im = poseFrame?.image;
+  const vis = poseFrame?.vis || [];
+  const invalid = {
+    torsoValid: false,
+    headValid: false,
+    arms: [
+      { valid: false, reason: 'no_pose', relEl: null, relWr: null },
+      { valid: false, reason: 'no_pose', relEl: null, relWr: null },
+    ],
+  };
+  if (!w || w.length < 25 || !im || im.length < 25) return invalid;
+
+  const ls = w[P.L_SHOULDER];
+  const rs = w[P.R_SHOULDER];
+  if (!pointFinite(ls) || !pointFinite(rs) || !pointFinite(im[P.L_SHOULDER]) || !pointFinite(im[P.R_SHOULDER])) {
+    return invalid;
+  }
+
+  const shMinVis = Math.min(vis[P.L_SHOULDER] ?? 1, vis[P.R_SHOULDER] ?? 1);
+  const shoulderSpan = dist3(ls, rs);
+  const torsoValid =
+    shMinVis >= 0.42 &&
+    inFrame(im[P.L_SHOULDER], 0.08) &&
+    inFrame(im[P.R_SHOULDER], 0.08) &&
+    shoulderSpan >= 0.14 &&
+    shoulderSpan <= 0.72;
+
+  if (!torsoValid) return invalid;
+
+  const noseVis = vis[P.NOSE] ?? 1;
+  const headValid =
+    pointFinite(w[P.NOSE]) &&
+    pointFinite(im[P.NOSE]) &&
+    noseVis >= 0.40 &&
+    inFrame(im[P.NOSE], 0.06);
+
+  const safeDt = clamp(Number.isFinite(dtSec) ? dtSec : 1 / 30, 1 / 120, 0.25);
+  const maxElJump = Math.max(0.20, 3.6 * safeDt);
+  const maxWrJump = Math.max(0.25, 4.4 * safeDt);
+
+  const evalArm = (sideIdx, shIdx, elIdx, wrIdx) => {
+    const prevArm = prevState?.arms?.[sideIdx] || null;
+    const wasLocked = Boolean(prevArm?.locked);
+
+    const shV = vis[shIdx] ?? 1;
+    const elV = vis[elIdx] ?? 1;
+    const wrV = vis[wrIdx] ?? 1;
+    // Hysteresis: stricter to acquire, slightly forgiving to hold while tracking smoothly
+    const minShV = wasLocked ? 0.45 : 0.60;
+    const minElV = wasLocked ? 0.46 : 0.60;
+    const minWrV = wasLocked ? 0.42 : 0.56;
+
+    if (shV < minShV || elV < minElV || wrV < minWrV) {
+      return { valid: false, reason: 'low_vis', relEl: null, relWr: null };
+    }
+
+    const imEl = im[elIdx];
+    const imWr = im[wrIdx];
+    const frameMargin = wasLocked ? 0.02 : -0.02;
+    if (!inFrame(imEl, frameMargin) || !inFrame(imWr, frameMargin)) {
+      return { valid: false, reason: 'out_of_frame', relEl: null, relWr: null };
+    }
+
+    const shW = w[shIdx];
+    const elW = w[elIdx];
+    const wrW = w[wrIdx];
+    if (!pointFinite(shW) || !pointFinite(elW) || !pointFinite(wrW)) {
+      return { valid: false, reason: 'non_finite', relEl: null, relWr: null };
+    }
+
+    const relEl = sub(elW, shW);
+    const relWr = sub(wrW, elW);
+    const upperLen = len(relEl);
+    const foreLen = len(relWr);
+    // Anatomical upper-arm & forearm bone-length sanity bounds (prevents collapsed/exploded hallucinations)
+    const minUpper = Math.max(0.11, shoulderSpan * 0.34);
+    const maxUpper = Math.min(0.54, shoulderSpan * 1.75);
+    const minFore = Math.max(0.09, shoulderSpan * 0.28);
+    const maxFore = Math.min(0.50, shoulderSpan * 1.65);
+    if (upperLen < minUpper || upperLen > maxUpper || foreLen < minFore || foreLen > maxFore) {
+      return { valid: false, reason: 'bad_bone_len', relEl: null, relWr: null };
+    }
+
+    // Single-frame teleport / velocity glitch rejection against recent valid arm vectors
+    if (wasLocked && prevArm?.relEl && prevArm?.relWr && prevArm.ageMs < 260) {
+      if (dist3(relEl, prevArm.relEl) > maxElJump || dist3(relWr, prevArm.relWr) > maxWrJump) {
+        return { valid: false, reason: 'teleport_glitch', relEl: null, relWr: null };
+      }
+    }
+
+    return { valid: true, reason: 'ok', relEl, relWr };
+  };
+
+  return {
+    torsoValid,
+    headValid,
+    arms: [
+      evalArm(0, P.L_SHOULDER, P.L_ELBOW, P.L_WRIST),
+      evalArm(1, P.R_SHOULDER, P.R_ELBOW, P.R_WRIST),
+    ],
+  };
+}
 
 /**
  * Retarget MediaPipe 3D world pose + 2D image landmarks + optional 21-pt hand landmarks
@@ -239,7 +451,11 @@ const DEG_TO_RAD = Math.PI / 180;
  * `mirrorSides = true`: like looking in a mirror at Luka facing you (your right arm
  * drives the arm on the right side of the viewport — Luka's left arm).
  */
-export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, calibration = null } = {}) {
+export function retargetPoseToLuka(
+  poseFrame,
+  hands = [],
+  { mirrorSides = true, calibration = null, prevJoints = null } = {},
+) {
   const w = poseFrame?.world;
   const im = poseFrame?.image;
   const vis = poseFrame?.vis || [];
@@ -257,9 +473,28 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
 
   const shoulderMid = mid(ls, rs);
   const hipMid = mid(lh, rh);
-  const upAxis = norm(sub(shoulderMid, hipMid));
-  // Ensure torso upAxis is sane even if hips are partially off-screen
-  const torsoUp = len(upAxis) > 0.5 ? upAxis : { x: 0, y: -1, z: 0 };
+  // Only trust MediaPipe hips when BOTH hips are visible & near/inside the camera frame;
+  // seated desk webcams frequently crop hips and hallucinate wild torso tilts otherwise!
+  const hipsVisible =
+    (vis[P.L_HIP] ?? 1) >= 0.58 &&
+    (vis[P.R_HIP] ?? 1) >= 0.58 &&
+    pointFinite(im[P.L_HIP]) &&
+    pointFinite(im[P.R_HIP]) &&
+    im[P.L_HIP].y <= 1.06 &&
+    im[P.R_HIP].y <= 1.06;
+
+  let torsoUp = { x: 0, y: -1, z: 0 };
+  if (hipsVisible) {
+    const upRaw = norm(sub(shoulderMid, hipMid));
+    if (len(upRaw) > 0.5 && upRaw.y < -0.75) {
+      // Clamp extreme torso tilt noise so hip depth jitter never rocks both arms wildly
+      torsoUp = norm({
+        x: clamp(upRaw.x, -0.34, 0.34),
+        y: Math.min(upRaw.y, -0.88),
+        z: clamp(upRaw.z, -0.34, 0.34),
+      });
+    }
+  }
 
   let sideRaw = sub(rs, ls);
   sideRaw = sub(sideRaw, scale(torsoUp, dot(sideRaw, torsoUp)));
@@ -268,6 +503,13 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
   const fwdAxis = norm(cross(rightAxis, torsoUp));
 
   function solveArmJoints(shoulder, elbow, wrist, outAxis, isLukaLeft, isSrcRight, handFrame, baseline) {
+    const j1Key = isLukaLeft ? 'idx13_left_arm_joint1' : 'idx20_right_arm_joint1';
+    const j3Key = isLukaLeft ? 'idx15_left_arm_joint3' : 'idx22_right_arm_joint3';
+    const j5Key = isLukaLeft ? 'idx17_left_arm_joint5' : 'idx24_right_arm_joint5';
+    const prevAbduct = prevJoints?.[j1Key];
+    const prevArmRoll = prevJoints?.[j3Key];
+    const prevForearmRoll = prevJoints?.[j5Key];
+
     // Express upper arm u and forearm f in torso [fwd, up, out] coordinates with Z-reach calibration
     const uRaw = sub(elbow, shoulder);
     const fRaw = sub(wrist, elbow);
@@ -283,18 +525,19 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
       z: dot(fRaw, outAxis),
     });
 
-    // Exact closed-form orthogonal shoulder angles for pure coronal j13/j20 * sagittal j14/j21:
+    // Exact closed-form orthogonal shoulder angles aligned to AgiBot A2 Ultra travel
     //   uFwd = -sin(beta), uUp = -cos(beta)*cos(alpha), uOut = cos(beta)*sin(alpha)
-    const beta = clamp(-Math.asin(clamp(uVec.x, -0.995, 0.995)) - heightTrimRad, -1.92, 0.62);
+    const beta = clamp(-Math.asin(clamp(uVec.x, -0.995, 0.995)) - heightTrimRad, -1.60, 0.46);
     const rawAlpha = Math.atan2(uVec.z, -uVec.y);
     // Smooth anti-gimbal blend when arm points straight forward (|uFwd| -> 1)
     const horizMag = Math.hypot(uVec.y, uVec.z);
-    const horizWeight = ramp(horizMag, 0.12, 0.36);
-    const alpha = rawAlpha * horizWeight + REST_ABDUCT_RAD * (1 - horizWeight);
-    const abduct = clamp(alpha - REST_ABDUCT_RAD, -0.35, 1.92);
+    const horizWeight = ramp(horizMag, 0.14, 0.38);
+    const fallbackAlpha = Number.isFinite(prevAbduct) ? prevAbduct + REST_ABDUCT_RAD : REST_ABDUCT_RAD;
+    const alpha = rawAlpha * horizWeight + fallbackAlpha * (1 - horizWeight);
+    const abduct = clamp(alpha - REST_ABDUCT_RAD, -0.32, 1.60);
 
-    // Elbow flexion (0 straight -> 2.02 rad bent)
-    const bend = clamp(Math.acos(clamp(dot(uVec, fVec), -1, 1)), 0, 2.02);
+    // Elbow flexion inside AimDK §7.1.9 hard limits (0.04 rad floor avoids 0.03 rad straight-arm stop)
+    const bend = clamp(Math.acos(clamp(dot(uVec, fVec), -1, 1)), 0.04, 1.98);
 
     // Exact analytic humeral roll (j15/j22) in the rotated shoulder frame R_abduct(alpha) * R_pitch(beta):
     //   eFwd = forearm bend direction at armRoll = 0
@@ -308,21 +551,25 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
     const uf = dot(uVec, fVec);
     const fPerpRaw = sub(fVec, scale(uVec, uf));
     const fpLen = len(fPerpRaw);
-    let armRoll = 0;
-    if (fpLen > 0.12 && bend > 0.18) {
+    let armRoll = Number.isFinite(prevArmRoll) ? prevArmRoll * 0.92 : 0;
+    if (fpLen > 0.14 && bend > 0.20) {
       const fPerp = scale(fPerpRaw, 1 / fpLen);
-      const rollWeight = ramp(bend, 0.18, 0.58);
+      const rollWeight = ramp(bend, 0.20, 0.62);
       const rawRoll = Math.atan2(-dot(fPerp, eOut), dot(fPerp, eFwd));
-      armRoll = clamp(rawRoll * rollWeight, -1.65, 1.65);
+      const unwrapped = unwrapAngleNear(rawRoll, prevArmRoll, -1.65, 1.65);
+      const fallbackRoll = Number.isFinite(prevArmRoll) ? prevArmRoll * 0.9 : 0;
+      armRoll = clamp(unwrapped * rollWeight + fallbackRoll * (1 - rollWeight), -1.65, 1.65);
     }
 
     // Calibrated forearm roll (j17/j24), wrist flexion (j18/j25), wrist deviation (j19/j26), and 6-channel finger curls
     let forearmRoll = -0.18 + wristRollTrimRad;
     let wristFlex = 0;
     let wristDev = 0;
-    let fingerCurls = { thumbOpp: 0.22, thumb: 0.20, index: 0.22, middle: 0.24, ring: 0.26, pinky: 0.28 };
+    let fingerCurls = { ...SAFE_NEUTRAL_HAND };
+    let hasHand = false;
 
     if (handFrame?.world?.length >= 21) {
+      hasHand = true;
       fingerCurls = extractFingerCurls(handFrame.world, baseline);
       const hw = handFrame.world;
 
@@ -346,10 +593,10 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
 
       // Project actual human knuckle span perpendicular to forearm to read exact pronation(+)/supination(-)
       const hrProj = sub(handRadial, scale(fW, dot(handRadial, fW)));
-      if (len(hrProj) > 0.15 && len(refRadial) > 0.5 && len(refInward) > 0.5) {
+      if (len(hrProj) > 0.16 && len(refRadial) > 0.5 && len(refInward) > 0.5) {
         const hrUnit = norm(hrProj);
         const rawForearmRoll = Math.atan2(dot(hrUnit, refInward), dot(hrUnit, refRadial));
-        forearmRoll = clamp(rawForearmRoll + wristRollTrimRad, -2.25, 2.25);
+        forearmRoll = unwrapAngleNear(rawForearmRoll + wristRollTrimRad, prevForearmRoll, -2.25, 2.25);
 
         // Rotate neutral wrist frame by forearmRoll to measure pure wrist flexion & radial/ulnar deviation
         const cR = Math.cos(rawForearmRoll);
@@ -359,9 +606,14 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
 
         const flexRad = Math.asin(clamp(dot(handDir, curPalm), -0.85, 0.85));
         const devRad = Math.asin(clamp(dot(handDir, curRadial), -0.75, 0.75));
-        // Verified FK signs: left hand flexes inward with -j18 & tilts toward thumb with -j19; right is +j25 / +j26
-        wristFlex = clamp((isLukaLeft ? -1 : 1) * flexRad * 0.85, -0.68, 0.68);
-        wristDev = clamp((isLukaLeft ? -1 : 1) * devRad * 0.75, -0.46, 0.46);
+        // Verified FK signs clamped inside AimDK §7.1.9 rhombic yellow parallel-wrist envelope (±0.30 / ±0.20 rad)
+        const rawFlex = clamp((isLukaLeft ? -1 : 1) * flexRad * 0.72, -0.30, 0.30);
+        const rawDev = clamp((isLukaLeft ? -1 : 1) * devRad * 0.60, -0.20, 0.20);
+        const wSafe = clampRhombicWrist(rawFlex, rawDev, 0.30, 0.20);
+        wristFlex = wSafe.j6;
+        wristDev = wSafe.j7;
+      } else if (Number.isFinite(prevForearmRoll)) {
+        forearmRoll = prevForearmRoll;
       }
     }
 
@@ -377,6 +629,7 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
           idx19_left_arm_joint7: wristDev,
         },
         fingers: fingerCurls,
+        hasHand,
       };
     }
     return {
@@ -390,6 +643,7 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
         idx26_right_arm_joint7: wristDev,
       },
       fingers: fingerCurls,
+      hasHand,
     };
   }
 
@@ -407,11 +661,11 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
   const imEarMid = mid(imLEar, imREar);
   const imEarSpan = Math.max(Math.hypot(imREar.x - imLEar.x, imREar.y - imLEar.y), 0.04);
 
-  // Lateral yaw: +rightAxis / +im.x is screen RIGHT -> +idx27_head_joint1 turns Luka toward screen RIGHT
+  // Lateral yaw: clamped to AimDK §7.1.5-6 documented neck range (±0.785 rad / ±45°)
   const yaw3d = dot(noseRel, rightAxis) / earSpan;
   const yaw2d = (imNose.x - imEarMid.x) / imEarSpan;
   const yawFused = yaw3d * 0.55 + yaw2d * 0.45;
-  const headYaw = clamp((mirrorSides ? 1 : -1) * yawFused * 2.25, -1.24, 1.24);
+  const headYaw = clamp((mirrorSides ? 1 : -1) * yawFused * 2.15, -0.785, 0.785);
 
   // Up/down pitch: +torsoUp / -im.y is UP -> +idx28_head_joint2 pitches Luka UP
   const pitch3d = dot(noseRel, torsoUp) / earSpan;
@@ -439,12 +693,11 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
   }
 
   const pitchFused = pitch3d * 0.48 + pitch2d * 0.52 + faceTilt * 0.35;
-  const headPitch = clamp(pitchFused * 1.95, -0.56, 0.60);
+  const headPitch = clamp(pitchFused * 1.85, -0.401, 0.401);
 
-  // Gaze target from screen-space nose position (0..1) so Luka keeps direct eye contact
-  // imNose.x > 0.5 (screen right) => +gazeYaw (Luka turns toward screen right)
-  const gazeYaw = clamp((imNose.x - 0.5) * 1.95, -1.18, 1.18);
-  const gazePitch = clamp((0.42 - imNose.y) * 1.35, -0.54, 0.58);
+  // Gaze target from screen-space nose position (0..1) inside AimDK §7.1.5-6 neck limits
+  const gazeYaw = clamp((imNose.x - 0.5) * 1.65, -0.785, 0.785);
+  const gazePitch = clamp((0.42 - imNose.y) * 1.15, -0.401, 0.401);
 
   const handLeftSrc = hands.find((h) => h.side === 0) || null;
   const handRightSrc = hands.find((h) => h.side === 1) || null;
@@ -491,6 +744,7 @@ export function retargetPoseToLuka(poseFrame, hands = [], { mirrorSides = true, 
   return {
     joints,
     hands: { left: lukaL.fingers, right: lukaR.fingers },
+    hasHand: { left: lukaL.hasHand, right: lukaR.hasHand },
     headTarget: { yaw: gazeYaw, pitch: gazePitch },
     detectedGesture,
     handCount: hands.length,
@@ -687,13 +941,33 @@ export class KameyokoVisionTracker {
     // Post-retarget joint & finger One Euro filters + velocity-aware deadband
     this.jointFilters = new Map();
     this.curlFilters = { left: new Map(), right: new Map() };
-    this.lastValidHand = [null, null]; // { hand, seenAtMs } for 450 ms dropout grace hold
+    this.lastValidHand = [null, null]; // { hand, seenAtMs } for dropout grace hold
     this.rawHandsLatest = [null, null]; // unfiltered latest world hands for one-click open-hand calibration
+    this.guard = this._makeGuardState();
 
     this.calibration = { ...DEFAULT_HAND_CALIBRATION };
     this.lastTracked = null;
     this.lastFrame = null;
     this.setSmoothing(this.calibration.smoothing);
+  }
+
+  _makeGuardState() {
+    return {
+      outputJoints: { ...SAFE_NEUTRAL_JOINTS },
+      outputHands: { left: { ...SAFE_NEUTRAL_HAND }, right: { ...SAFE_NEUTRAL_HAND } },
+      headTarget: { yaw: 0, pitch: 0 },
+      head: { state: 'RELAX', locked: false, lostMs: 1000, streak: 0, blend: 0, everLocked: false },
+      arms: {
+        left: { state: 'RELAX', locked: false, lostMs: 1000, streak: 0, blend: 0, everLocked: false, reason: 'init', handLostMs: 1000, handState: 'RELAX' },
+        right: { state: 'RELAX', locked: false, lostMs: 1000, streak: 0, blend: 0, everLocked: false, reason: 'init', handLostMs: 1000, handState: 'RELAX' },
+      },
+      rawSrcArms: [
+        { locked: false, relEl: null, relWr: null, seenAtMs: -1e9, candRelEl: null, candRelWr: null },
+        { locked: false, relEl: null, relWr: null, seenAtMs: -1e9, candRelEl: null, candRelWr: null },
+      ],
+      lastFrameMs: -1,
+      lastRawPose: null,
+    };
   }
 
   /** Adjust anti-jitter smoothing live (0 = snappy, 1 = ultra-smooth). */
@@ -756,17 +1030,24 @@ export class KameyokoVisionTracker {
     this.curlFilters.right.clear();
     this.lastValidHand = [null, null];
     this.rawHandsLatest = [null, null];
+    this.guard = this._makeGuardState();
   }
 
   async _ensureModels() {
     if (this.poseLandmarker) return;
     this.onStatus('Loading Kameyoko MediaPipe runtime…');
+    const isStatic = typeof document !== 'undefined' && document.querySelector?.('meta[name="luka-env"]')?.content === 'static';
     let visionMod;
-    let wasmBase = '/mediapipe/wasm';
-    try {
-      visionMod = await import('/mediapipe/vision_bundle.mjs');
-    } catch {
-      wasmBase = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${REMOTE_CDN_VERSION}/wasm`;
+    let wasmBase = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${REMOTE_CDN_VERSION}/wasm`;
+    if (!isStatic) {
+      try {
+        visionMod = await import('/mediapipe/vision_bundle.mjs');
+        wasmBase = '/mediapipe/wasm';
+      } catch {
+        visionMod = null;
+      }
+    }
+    if (!visionMod) {
       visionMod = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${REMOTE_CDN_VERSION}/vision_bundle.mjs`);
     }
 
@@ -859,6 +1140,7 @@ export class KameyokoVisionTracker {
 
   _filterRetargeted(raw, dtSec) {
     if (!raw) return null;
+    const safeDt = clamp(Number.isFinite(dtSec) ? dtSec : 1 / 60, 1 / 240, 0.2);
     const s = this.calibration.smoothing;
     const jointCutoff = lerp(3.0, 0.85, s);
     const jointBeta = lerp(0.95, 0.22, s);
@@ -875,11 +1157,30 @@ export class KameyokoVisionTracker {
         this.jointFilters.set(k, f);
       }
       const prev = f.x;
+      const isHead = k.startsWith('idx27_') || k.startsWith('idx28_');
       const isWrist = k.endsWith('joint5') || k.endsWith('joint6') || k.endsWith('joint7');
-      const db = isWrist ? jointDeadband * 1.45 : jointDeadband;
-      const target = (prev !== null && Math.abs(v - prev) < db) ? prev : v;
-      joints[k] = f.filter(target, dtSec);
+      const isRelaxing =
+        (isHead && raw.trackingState?.head === 'RELAX') ||
+        (k.includes('_left_arm_') && raw.trackingState?.leftArm === 'RELAX') ||
+        (k.includes('_right_arm_') && raw.trackingState?.rightArm === 'RELAX');
+      const db = isRelaxing ? 0 : (isWrist ? jointDeadband * 1.45 : jointDeadband);
+      let target = (prev !== null && db > 0 && Math.abs(v - prev) < db) ? prev : v;
+      // Slew-rate guard prevents any residual single-frame glitch from whipping a limb
+      if (prev !== null) {
+        const maxRate = isHead ? 2.2 : (isWrist ? 2.1 : 2.5);
+        const maxStep = maxRate * safeDt;
+        target = clamp(target, prev - maxStep, prev + maxStep);
+      }
+      joints[k] = f.filter(target, safeDt);
     }
+
+    // Re-enforce coupled rhombic wrist diamond after filtering
+    const wL = clampRhombicWrist(joints.idx18_left_arm_joint6, joints.idx19_left_arm_joint7, 0.30, 0.20);
+    joints.idx18_left_arm_joint6 = wL.j6;
+    joints.idx19_left_arm_joint7 = wL.j7;
+    const wR = clampRhombicWrist(joints.idx25_right_arm_joint6, joints.idx26_right_arm_joint7, 0.30, 0.20);
+    joints.idx25_right_arm_joint6 = wR.j6;
+    joints.idx26_right_arm_joint7 = wR.j7;
 
     const hands = { left: {}, right: {} };
     for (const side of ['left', 'right']) {
@@ -890,8 +1191,12 @@ export class KameyokoVisionTracker {
           this.curlFilters[side].set(k, f);
         }
         const prev = f.x;
-        const target = (prev !== null && Math.abs(v - prev) < curlDeadband) ? prev : v;
-        hands[side][k] = Number(clamp(f.filter(target, dtSec), 0, 1).toFixed(3));
+        let target = (prev !== null && Math.abs(v - prev) < curlDeadband) ? prev : v;
+        if (prev !== null) {
+          const maxCurlStep = 3.2 * safeDt;
+          target = clamp(target, prev - maxCurlStep, prev + maxCurlStep);
+        }
+        hands[side][k] = Number(clamp(f.filter(target, safeDt), 0, 1).toFixed(3));
       }
     }
 
@@ -906,38 +1211,41 @@ export class KameyokoVisionTracker {
     };
   }
 
-  _assignHandsToWrists(poseImage, rawHands, aspect, nowMs, dtSec) {
+  _assignHandsToWrists(poseImage, rawHands, aspect, nowMs, dtSec, armValidMask = [true, true]) {
     const lw = poseImage[P.L_WRIST];
     const rw = poseImage[P.R_WRIST];
     const ls = poseImage[P.L_SHOULDER];
-    const lh = poseImage[P.L_HIP];
-    const scaleNorm = Math.max(Math.hypot((ls.x - lh.x) * aspect, ls.y - lh.y), 0.08);
+    const rs = poseImage[P.R_SHOULDER];
+    // Use shoulder width (always in-frame) rather than hips (often cropped on desk webcams)
+    const shoulderNorm = Math.hypot((ls.x - rs.x) * aspect, ls.y - rs.y) * 1.35;
+    const scaleNorm = Math.max(shoulderNorm, 0.12);
     const matched = [null, null];
 
-    if (rawHands.length) {
+    const validRawHands = (rawHands || []).filter(isHandPlausible);
+    if (validRawHands.length) {
       const pairs = [];
-      rawHands.forEach((h, hi) => {
+      validRawHands.forEach((h, hi) => {
         const hw = h.image[0];
-        let d0 = Math.hypot((hw.x - lw.x) * aspect, hw.y - lw.y) / scaleNorm;
-        let d1 = Math.hypot((hw.x - rw.x) * aspect, hw.y - rw.y) / scaleNorm;
-        // Soft hysteresis bias using previous frame hand position + handedness to prevent L/R cross-swaps
-        if (this.lastValidHand[0] && nowMs - this.lastValidHand[0].seenAtMs < 350) {
-          const prev0 = this.lastValidHand[0].hand.image[0];
-          d0 = d0 * 0.72 + (Math.hypot((hw.x - prev0.x) * aspect, hw.y - prev0.y) / scaleNorm) * 0.28;
+        for (const side of [0, 1]) {
+          // NEVER attach a detected hand to an invisible / out-of-frame arm (prevents cross-arm steals!)
+          if (!armValidMask[side]) continue;
+          const wristPt = side === 0 ? lw : rw;
+          let d = Math.hypot((hw.x - wristPt.x) * aspect, hw.y - wristPt.y) / scaleNorm;
+          if (this.lastValidHand[side] && nowMs - this.lastValidHand[side].seenAtMs < 350) {
+            const prevPt = this.lastValidHand[side].hand.image[0];
+            const jump2d = Math.hypot((hw.x - prevPt.x) * aspect, hw.y - prevPt.y);
+            if (jump2d > 0.42) continue; // reject sudden cross-frame hand teleports
+            d = d * 0.72 + (jump2d / scaleNorm) * 0.28;
+          }
+          pairs.push({ hi, side, d });
         }
-        if (this.lastValidHand[1] && nowMs - this.lastValidHand[1].seenAtMs < 350) {
-          const prev1 = this.lastValidHand[1].hand.image[0];
-          d1 = d1 * 0.72 + (Math.hypot((hw.x - prev1.x) * aspect, hw.y - prev1.y) / scaleNorm) * 0.28;
-        }
-        pairs.push({ hi, side: 0, d: d0 });
-        pairs.push({ hi, side: 1, d: d1 });
       });
       pairs.sort((a, b) => a.d - b.d);
       const usedHands = new Set();
       for (const p of pairs) {
-        if (p.d > 0.72 || usedHands.has(p.hi) || matched[p.side]) continue;
+        if (p.d > 0.62 || usedHands.has(p.hi) || matched[p.side]) continue;
         usedHands.add(p.hi);
-        const src = rawHands[p.hi];
+        const src = validRawHands[p.hi];
         this.rawHandsLatest[p.side] = src;
         const filtHand = {
           side: p.side,
@@ -949,14 +1257,14 @@ export class KameyokoVisionTracker {
       }
     }
 
-    // 450 ms dropout grace hold so brief occlusion never snaps fingers/wrists back to neutral
+    // 550 ms dropout grace hold (only while that arm is still valid); beyond that let failsafe smoothly relax
     const out = [];
     for (let side = 0; side < 2; side++) {
       if (matched[side]) {
         out.push(matched[side]);
-      } else if (this.lastValidHand[side] && nowMs - this.lastValidHand[side].seenAtMs < 450) {
+      } else if (armValidMask[side] && this.lastValidHand[side] && nowMs - this.lastValidHand[side].seenAtMs < 550) {
         out.push(this.lastValidHand[side].hand);
-      } else if (this.lastValidHand[side] && nowMs - this.lastValidHand[side].seenAtMs >= 900) {
+      } else if (!armValidMask[side] || (this.lastValidHand[side] && nowMs - this.lastValidHand[side].seenAtMs >= 900)) {
         this.handImageFilters[side].reset();
         this.handWorldFilters[side].reset();
         this.lastValidHand[side] = null;
@@ -965,76 +1273,337 @@ export class KameyokoVisionTracker {
     return out;
   }
 
-  /** Step tracker once per animation frame; returns retargeted Luka pose + draws Kameyoko skeleton overlay. */
-  update(nowMs, dtSec) {
-    if (!this.running) return null;
+  /**
+   * Process a raw (unfiltered) pose + hand detection frame through the full anti-spaz failsafe:
+   *   1. Visibility / presence / in-frame / bone-length / anti-teleport gating per arm
+   *   2. Selective landmark freezing so lost arms never poison OneEuro filters
+   *   3. Per-arm 3-state failsafe: LOCKED -> HOLD (0..900ms freeze) -> RELAX (gentle drift to neutral)
+   *   4. 3-frame reacquire debounce + smooth 0.38s blend-in on return
+   *   5. Continuous atan2 angle unwrapping + per-joint slew-rate cap + rhombic wrist guard
+   */
+  processRawFrame(rawPose, rawHands, nowMs, dtSec, aspect = 16 / 9) {
+    const safeDt = clamp(Number.isFinite(dtSec) ? dtSec : 1 / 30, 1 / 240, 0.2);
+    const dtMs = safeDt * 1000;
+    const g = this.guard;
+    const isDemo = this.sourceMode === 'demo';
+    const reacquireRequired = isDemo ? 1 : 3;
+    const holdGraceMs = 900;
+    const handHoldGraceMs = 550;
 
-    let poseFrame = null;
-    let hands = [];
+    // 1. Evaluate raw pose quality BEFORE filtering
+    const prevQualState = {
+      arms: g.rawSrcArms.map((a) => ({
+        locked: a.locked,
+        relEl: a.relEl,
+        relWr: a.relWr,
+        ageMs: nowMs - a.seenAtMs,
+      })),
+    };
+    const quality = rawPose ? assessPoseTrackingQuality(rawPose, prevQualState, safeDt) : assessPoseTrackingQuality(null);
 
-    if (this.sourceMode === 'demo') {
-      this.demoTime += dtSec;
-      const sample = sampleDemoTrackedFrame(this.demoTime);
-      poseFrame = {
-        image: this.imageFilter.filter(sample.pose.image, dtSec),
-        world: this.worldFilter.filter(sample.pose.world, dtSec),
-        vis: sample.pose.vis,
-      };
-      hands = sample.hands.map((h) => {
-        this.rawHandsLatest[h.side] = h;
-        return {
-          side: h.side,
-          image: this.handImageFilters[h.side].filter(h.image, dtSec),
-          world: this.handWorldFilters[h.side].filter(h.world, dtSec),
-        };
-      });
-    } else if (this.sourceMode === 'camera' && this.video && this.video.readyState >= 2 && this.poseLandmarker) {
-      if (this.video.currentTime !== this.lastVideoTime) {
-        this.lastVideoTime = this.video.currentTime;
-        const ts = Math.max(Math.round(nowMs), this.lastTs + 1);
-        this.lastTs = ts;
-        const pr = this.poseLandmarker.detectForVideo(this.video, ts);
-        if (pr.landmarks?.length && pr.worldLandmarks?.[0]?.length) {
-          const mirrorImg = (l) => ({ x: 1 - l.x, y: l.y, z: l.z });
-          const mirrorWld = (l) => ({ x: -l.x, y: l.y, z: l.z });
-          const rawImg = pr.landmarks[0].map(mirrorImg);
-          const rawWld = pr.worldLandmarks[0].map(mirrorWld);
-          const vis = pr.landmarks[0].map((l) => l.visibility ?? 1);
-          poseFrame = {
-            image: this.imageFilter.filter(rawImg, dtSec),
-            world: this.worldFilter.filter(rawWld, dtSec),
-            vis,
-          };
-
-          const rawHands = [];
-          if (this.handLandmarker) {
-            const hr = this.handLandmarker.detectForVideo(this.video, ts);
-            (hr.landmarks || []).forEach((lm, idx) => {
-              rawHands.push({
-                image: lm.map(mirrorImg),
-                world: (hr.worldLandmarks?.[idx] || []).map(mirrorWld),
-              });
-            });
-          }
-          const aspect = (this.video.videoWidth || 16) / Math.max(this.video.videoHeight || 9, 1);
-          hands = this._assignHandsToWrists(poseFrame.image, rawHands, aspect, nowMs, dtSec);
-          this.lastFrame = { pose: poseFrame, hands };
+    // 2. Build freezeMask so lost/glitched arm landmarks NEVER pollute OneEuro filters
+    const freezeMask = new Set();
+    const srcArmValid = [false, false];
+    for (const srcSide of [0, 1]) {
+      const qa = quality.arms[srcSide];
+      const rs = g.rawSrcArms[srcSide];
+      if (quality.torsoValid && qa.valid) {
+        srcArmValid[srcSide] = true;
+        // Track clean consecutive candidate consistency when re-acquiring
+        if (!rs.locked) {
+          const consistent =
+            !rs.candRelEl ||
+            (dist3(qa.relEl, rs.candRelEl) < 0.18 && dist3(qa.relWr, rs.candRelWr) < 0.22);
+          rs.candRelEl = qa.relEl;
+          rs.candRelWr = qa.relWr;
+          if (!consistent) srcArmValid[srcSide] = false;
+        } else {
+          rs.relEl = qa.relEl;
+          rs.relWr = qa.relWr;
+          rs.seenAtMs = nowMs;
         }
-      } else if (this.lastFrame) {
-        poseFrame = this.lastFrame.pose;
-        hands = this.lastFrame.hands;
+      } else {
+        rs.candRelEl = null;
+        rs.candRelWr = null;
+      }
+
+      if (!srcArmValid[srcSide]) {
+        const indices = srcSide === 0 ? SRC_LEFT_ARM_LANDMARKS : SRC_RIGHT_ARM_LANDMARKS;
+        for (const idx of indices) freezeMask.add(idx);
+      } else if (!rs.locked) {
+        const lukaSide = (srcSide === 1) === this.mirrorSides ? 'left' : 'right';
+        if (g.arms[lukaSide].streak === 0) {
+          // Fresh clean arm candidate after dropout: seed OneEuro filters cleanly without stale drag
+          const indices = srcSide === 0 ? SRC_LEFT_ARM_LANDMARKS : SRC_RIGHT_ARM_LANDMARKS;
+          this.imageFilter.resetIndices(indices);
+          this.worldFilter.resetIndices(indices);
+        }
       }
     }
 
-    if (poseFrame) {
-      const rawRetargeted = retargetPoseToLuka(poseFrame, hands, {
+    // 3. Filter pose landmarks (selectively freezing lost limbs) and match plausible hands
+    let poseFrame = null;
+    let matchedHands = [];
+    let rawRetargeted = null;
+    if (quality.torsoValid && rawPose) {
+      // If an arm just became valid after being lost, re-seed its landmark filters cleanly on lock transition below
+      poseFrame = {
+        image: this.imageFilter.filter(rawPose.image, safeDt, freezeMask),
+        world: this.worldFilter.filter(rawPose.world, safeDt, freezeMask),
+        vis: rawPose.vis,
+      };
+      matchedHands = isDemo
+        ? (rawHands || []).map((h) => {
+            this.rawHandsLatest[h.side] = h;
+            return {
+              side: h.side,
+              image: this.handImageFilters[h.side].filter(h.image, safeDt),
+              world: this.handWorldFilters[h.side].filter(h.world, safeDt),
+            };
+          })
+        : this._assignHandsToWrists(poseFrame.image, rawHands || [], aspect, nowMs, safeDt, srcArmValid);
+
+      rawRetargeted = retargetPoseToLuka(poseFrame, matchedHands, {
         mirrorSides: this.mirrorSides,
         calibration: this.calibration,
+        prevJoints: g.outputJoints,
       });
-      this.lastTracked = this._filterRetargeted(rawRetargeted, dtSec);
-      this._drawOverlay(poseFrame, hands, this.lastTracked);
-    } else if (this.ctx && this.canvas) {
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    // 4. Advance head failsafe state machine
+    const relaxAlpha = 1 - Math.exp(-safeDt / 0.95);
+    const handRelaxAlpha = 1 - Math.exp(-safeDt / 0.70);
+    const headSt = g.head;
+    if (quality.torsoValid && quality.headValid && rawRetargeted) {
+      headSt.streak += 1;
+      const needed = headSt.everLocked ? 2 : 1;
+      if (headSt.locked || headSt.streak >= needed) {
+        if (!headSt.locked) headSt.blend = headSt.everLocked ? 0 : 1;
+        headSt.locked = true;
+        headSt.everLocked = true;
+        headSt.state = 'LOCKED';
+        headSt.lostMs = 0;
+        headSt.blend = Math.min(1, headSt.blend + safeDt / 0.30);
+        for (const k of HEAD_JOINTS) {
+          g.outputJoints[k] = lerp(g.outputJoints[k], rawRetargeted.joints[k], headSt.blend);
+        }
+        g.headTarget = {
+          yaw: lerp(g.headTarget.yaw, rawRetargeted.headTarget.yaw, headSt.blend),
+          pitch: lerp(g.headTarget.pitch, rawRetargeted.headTarget.pitch, headSt.blend),
+        };
+      }
+    } else {
+      headSt.streak = 0;
+      headSt.locked = false;
+      headSt.lostMs += dtMs;
+      if (headSt.everLocked && headSt.lostMs < holdGraceMs) {
+        headSt.state = 'HOLD';
+      } else {
+        headSt.state = 'RELAX';
+        headSt.blend = 0;
+        for (const k of HEAD_JOINTS) {
+          g.outputJoints[k] = lerp(g.outputJoints[k], SAFE_NEUTRAL_JOINTS[k], relaxAlpha);
+        }
+        g.headTarget = {
+          yaw: lerp(g.headTarget.yaw, 0, relaxAlpha),
+          pitch: lerp(g.headTarget.pitch, 0, relaxAlpha),
+        };
+      }
+    }
+
+    // 5. Advance independent per-arm + per-hand failsafe state machine (Luka left & right)
+    const armMap = [
+      { lukaSide: 'left', srcSide: this.mirrorSides ? 1 : 0, jointKeys: LUKA_LEFT_ARM_JOINTS },
+      { lukaSide: 'right', srcSide: this.mirrorSides ? 0 : 1, jointKeys: LUKA_RIGHT_ARM_JOINTS },
+    ];
+    const wristTrimRad = clamp((this.calibration.wristRollTrimDeg ?? 0) * DEG_TO_RAD, -1.0, 1.0);
+
+    for (const { lukaSide, srcSide, jointKeys } of armMap) {
+      const armSt = g.arms[lukaSide];
+      const rs = g.rawSrcArms[srcSide];
+      const qa = quality.arms[srcSide];
+      const isValidNow = srcArmValid[srcSide] && Boolean(rawRetargeted);
+
+      if (isValidNow) {
+        armSt.streak += 1;
+        armSt.reason = 'ok';
+        const needed = (isDemo && !armSt.everLocked) ? 1 : reacquireRequired;
+        if (armSt.locked || armSt.streak >= needed) {
+          if (!armSt.locked) {
+            armSt.blend = (isDemo && !armSt.everLocked) ? 1 : 0;
+          }
+          armSt.locked = true;
+          armSt.everLocked = true;
+          armSt.state = 'LOCKED';
+          armSt.lostMs = 0;
+          rs.locked = true;
+          rs.relEl = qa.relEl;
+          rs.relWr = qa.relWr;
+          rs.seenAtMs = nowMs;
+          armSt.blend = Math.min(1, armSt.blend + safeDt / 0.38);
+
+          // Blend shoulder + humeral roll + elbow smoothly (first 4 joints)
+          for (let ji = 0; ji < 4; ji++) {
+            const k = jointKeys[ji];
+            g.outputJoints[k] = lerp(g.outputJoints[k], rawRetargeted.joints[k], armSt.blend);
+          }
+
+          // Handle forearm roll, wrist flexion/deviation & fingers with smooth hand-dropout protection
+          const j5 = jointKeys[4];
+          const j6 = jointKeys[5];
+          const j7 = jointKeys[6];
+          const hasHandNow = Boolean(rawRetargeted.hasHand?.[lukaSide]);
+          if (hasHandNow) {
+            armSt.handLostMs = 0;
+            armSt.handState = 'LOCKED';
+            g.outputJoints[j5] = lerp(g.outputJoints[j5], rawRetargeted.joints[j5], armSt.blend);
+            g.outputJoints[j6] = lerp(g.outputJoints[j6], rawRetargeted.joints[j6], armSt.blend);
+            g.outputJoints[j7] = lerp(g.outputJoints[j7], rawRetargeted.joints[j7], armSt.blend);
+            for (const fk of FINGER_KEYS) {
+              g.outputHands[lukaSide][fk] = lerp(g.outputHands[lukaSide][fk], rawRetargeted.hands[lukaSide][fk], armSt.blend);
+            }
+          } else {
+            armSt.handLostMs += dtMs;
+            if (armSt.handLostMs < handHoldGraceMs) {
+              armSt.handState = 'HOLD';
+              // Freeze wrist & fingers cleanly during brief hand occlusion — ZERO snap!
+            } else {
+              armSt.handState = 'RELAX';
+              // Gently ease wrist & fingers back to neutral instead of snapping
+              g.outputJoints[j5] = lerp(g.outputJoints[j5], SAFE_NEUTRAL_JOINTS[j5] + wristTrimRad, handRelaxAlpha);
+              g.outputJoints[j6] = lerp(g.outputJoints[j6], 0, handRelaxAlpha);
+              g.outputJoints[j7] = lerp(g.outputJoints[j7], 0, handRelaxAlpha);
+              for (const fk of FINGER_KEYS) {
+                g.outputHands[lukaSide][fk] = lerp(g.outputHands[lukaSide][fk], SAFE_NEUTRAL_HAND[fk], handRelaxAlpha);
+              }
+            }
+          }
+        }
+      } else {
+        armSt.streak = 0;
+        armSt.locked = false;
+        rs.locked = false;
+        armSt.reason = quality.torsoValid ? qa.reason : 'no_pose';
+        armSt.lostMs += dtMs;
+        armSt.handLostMs += dtMs;
+        if (armSt.everLocked && armSt.lostMs < holdGraceMs) {
+          armSt.state = 'HOLD';
+          armSt.handState = 'HOLD';
+          // Freeze all 7 arm joints & 6 fingers right where they were — ZERO spaz!
+        } else {
+          armSt.state = 'RELAX';
+          armSt.handState = 'RELAX';
+          armSt.blend = 0;
+          for (const k of jointKeys) {
+            g.outputJoints[k] = lerp(g.outputJoints[k], SAFE_NEUTRAL_JOINTS[k], relaxAlpha);
+          }
+          for (const fk of FINGER_KEYS) {
+            g.outputHands[lukaSide][fk] = lerp(g.outputHands[lukaSide][fk], SAFE_NEUTRAL_HAND[fk], handRelaxAlpha);
+          }
+        }
+      }
+    }
+
+    // 6. Compose safeguarded tracked output & run final anti-jitter OneEuro + slew cap + rhombic wrist guard
+    const anyArmLocked = g.arms.left.state === 'LOCKED' || g.arms.right.state === 'LOCKED';
+    const detectedGesture = anyArmLocked && rawRetargeted
+      ? rawRetargeted.detectedGesture
+      : (g.arms.left.state === 'HOLD' || g.arms.right.state === 'HOLD' ? 'Holding Safe Pose' : 'Neutral (Arms Relaxed)');
+
+    const safePacket = {
+      joints: { ...g.outputJoints },
+      hands: {
+        left: { ...g.outputHands.left },
+        right: { ...g.outputHands.right },
+      },
+      headTarget: { ...g.headTarget },
+      detectedGesture,
+      handCount: matchedHands.length,
+      visibility: rawRetargeted?.visibility ?? 0,
+      trackingState: {
+        pose: quality.torsoValid ? 'LOCKED' : (g.head.state === 'HOLD' ? 'HOLD' : 'RELAX'),
+        head: g.head.state,
+        leftArm: g.arms.left.state,
+        rightArm: g.arms.right.state,
+        leftHand: g.arms.left.handState,
+        rightHand: g.arms.right.handState,
+        leftReason: g.arms.left.reason,
+        rightReason: g.arms.right.reason,
+      },
+    };
+
+    const filtered = this._filterRetargeted(safePacket, safeDt);
+    this.lastTracked = filtered;
+    this.lastFrame = poseFrame ? { pose: poseFrame, hands: matchedHands } : null;
+    return filtered;
+  }
+
+  /** Step tracker once per animation frame; returns retargeted Luka pose + draws Kameyoko skeleton overlay. */
+  update(nowMs, dtSec) {
+    if (!this.running) return null;
+    const safeDt = clamp(Number.isFinite(dtSec) ? dtSec : 1 / 60, 1 / 240, 0.2);
+
+    if (this.sourceMode === 'demo') {
+      this.demoTime += safeDt;
+      const sample = sampleDemoTrackedFrame(this.demoTime);
+      const tracked = this.processRawFrame(sample.pose, sample.hands, nowMs, safeDt, 16 / 9);
+      if (this.lastFrame) this._drawOverlay(this.lastFrame.pose, this.lastFrame.hands, tracked);
+      return tracked;
+    }
+
+    if (this.sourceMode === 'camera' && this.video && this.video.readyState >= 2 && this.poseLandmarker) {
+      if (this.video.currentTime !== this.lastVideoTime) {
+        this.lastVideoTime = this.video.currentTime;
+        const ts = Math.max(Math.round(nowMs), this.lastTs + 1);
+        const camDt = this.guard.lastFrameMs > 0
+          ? clamp((nowMs - this.guard.lastFrameMs) / 1000, 1 / 120, 0.25)
+          : safeDt;
+        this.guard.lastFrameMs = nowMs;
+        this.lastTs = ts;
+
+        const pr = this.poseLandmarker.detectForVideo(this.video, ts);
+        let rawPose = null;
+        const rawHands = [];
+        if (pr.landmarks?.length && pr.worldLandmarks?.[0]?.length) {
+          const mirrorImg = (l) => ({ x: 1 - l.x, y: l.y, z: l.z });
+          const mirrorWld = (l) => ({ x: -l.x, y: l.y, z: l.z });
+          rawPose = {
+            image: pr.landmarks[0].map(mirrorImg),
+            world: pr.worldLandmarks[0].map(mirrorWld),
+            // Combine MediaPipe visibility & presence so occluded or off-screen joints are caught immediately
+            vis: pr.landmarks[0].map((l) => Math.min(l.visibility ?? 1, l.presence ?? 1)),
+          };
+          if (this.handLandmarker) {
+            const hr = this.handLandmarker.detectForVideo(this.video, ts);
+            const scores = hr.handednesses || hr.handedness || [];
+            (hr.landmarks || []).forEach((lm, idx) => {
+              const score = scores[idx]?.[0]?.score;
+              rawHands.push({
+                image: lm.map(mirrorImg),
+                world: (hr.worldLandmarks?.[idx] || []).map(mirrorWld),
+                score: typeof score === 'number' ? score : 1,
+              });
+            });
+          }
+        }
+        const aspect = (this.video.videoWidth || 16) / Math.max(this.video.videoHeight || 9, 1);
+        const tracked = this.processRawFrame(rawPose, rawHands, nowMs, camDt, aspect);
+        if (this.lastFrame) {
+          this._drawOverlay(this.lastFrame.pose, this.lastFrame.hands, tracked);
+        } else if (this.ctx && this.canvas) {
+          this._drawOverlay(null, [], tracked);
+        }
+        return tracked;
+      }
+
+      // Between 30 fps webcam frames, keep relaxation/hold smooth at 60 fps if pose was lost
+      if (this.lastFrame) {
+        this._drawOverlay(this.lastFrame.pose, this.lastFrame.hands, this.lastTracked);
+      } else if (this.guard.lastFrameMs > 0 && nowMs - this.guard.lastFrameMs > 120) {
+        const tracked = this.processRawFrame(null, [], nowMs, safeDt, 16 / 9);
+        this._drawOverlay(null, [], tracked);
+        return tracked;
+      }
     }
 
     return this.lastTracked;
@@ -1064,25 +1633,29 @@ export class KameyokoVisionTracker {
       for (let gy = 0; gy < h; gy += 28) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke(); }
     }
 
-    const pts = poseFrame.image.map((p) => ({ x: p.x * w, y: p.y * h }));
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#38d9f5';
-    ctx.lineWidth = 2.4;
-    ctx.beginPath();
-    for (const [a, b] of UPPER_POSE_CONNECTIONS) {
-      if ((poseFrame.vis[a] ?? 1) < 0.35 || (poseFrame.vis[b] ?? 1) < 0.35) continue;
-      ctx.moveTo(pts[a].x, pts[a].y);
-      ctx.lineTo(pts[b].x, pts[b].y);
-    }
-    ctx.stroke();
-
-    // Key upper-body joints
-    for (const idx of [0, 7, 8, 11, 12, 13, 14, 15, 16]) {
-      if ((poseFrame.vis[idx] ?? 1) < 0.35) continue;
-      ctx.fillStyle = idx === 0 ? '#fbbf24' : '#e2f1ff';
+    const ts = tracked?.trackingState;
+    if (poseFrame?.image?.length) {
+      const pts = poseFrame.image.map((p) => ({ x: p.x * w, y: p.y * h }));
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#38d9f5';
+      ctx.lineWidth = 2.4;
       ctx.beginPath();
-      ctx.arc(pts[idx].x, pts[idx].y, idx === 0 ? 4.2 : 3.2, 0, Math.PI * 2);
-      ctx.fill();
+      for (const [a, b] of UPPER_POSE_CONNECTIONS) {
+        if ((poseFrame.vis[a] ?? 1) < 0.45 || (poseFrame.vis[b] ?? 1) < 0.45) continue;
+        if (!inFrame(poseFrame.image[a], 0.02) || !inFrame(poseFrame.image[b], 0.02)) continue;
+        ctx.moveTo(pts[a].x, pts[a].y);
+        ctx.lineTo(pts[b].x, pts[b].y);
+      }
+      ctx.stroke();
+
+      // Key upper-body joints
+      for (const idx of [0, 7, 8, 11, 12, 13, 14, 15, 16]) {
+        if ((poseFrame.vis[idx] ?? 1) < 0.45 || !inFrame(poseFrame.image[idx], 0.02)) continue;
+        ctx.fillStyle = idx === 0 ? '#fbbf24' : '#e2f1ff';
+        ctx.beginPath();
+        ctx.arc(pts[idx].x, pts[idx].y, idx === 0 ? 4.2 : 3.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     // 21-point Kameyoko hand skeletons
@@ -1104,9 +1677,18 @@ export class KameyokoVisionTracker {
       }
     }
 
+    if (ts && (ts.leftArm !== 'LOCKED' || ts.rightArm !== 'LOCKED')) {
+      const guardText = `GUARD · L:${ts.leftArm} · R:${ts.rightArm}`;
+      ctx.fillStyle = 'rgba(15, 18, 28, 0.80)';
+      ctx.fillRect(8, 8, Math.min(w - 16, 198), 18);
+      ctx.fillStyle = ts.leftArm === 'HOLD' || ts.rightArm === 'HOLD' ? '#fbbf24' : '#94a3b8';
+      ctx.font = '600 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+      ctx.fillText(guardText, 14, 20);
+    }
+
     if (tracked?.detectedGesture) {
       ctx.fillStyle = 'rgba(8, 12, 18, 0.72)';
-      ctx.fillRect(8, h - 26, Math.min(w - 16, 175), 18);
+      ctx.fillRect(8, h - 26, Math.min(w - 16, 190), 18);
       ctx.fillStyle = '#34d399';
       ctx.font = '600 10.5px ui-monospace, SFMono-Regular, Menlo, monospace';
       ctx.fillText(`POSE: ${tracked.detectedGesture.toUpperCase()}`, 14, h - 13);

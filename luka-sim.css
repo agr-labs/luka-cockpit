@@ -919,6 +919,56 @@ kbd {
 .cal-sliders { display: flex; flex-direction: column; gap: 2px; }
 .slider-row.compact { grid-template-columns: 78px 1fr 40px; padding: 1px 0; }
 
+/* Hardware Safety Topbar Controls & Dry-Run Inspector */
+.pill-btn {
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.pill-btn:hover { border-color: var(--cyan); background: rgba(56, 217, 245, 0.1); }
+.dot.warn { background: var(--amber); box-shadow: 0 0 8px rgba(251, 191, 36, 0.7); }
+.dot.danger { background: var(--rose); box-shadow: 0 0 8px rgba(251, 113, 133, 0.75); }
+
+.hold-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 113, 133, 0.45);
+  background: rgba(251, 113, 133, 0.10);
+  color: #fecdd3;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.hold-btn:hover { background: rgba(251, 113, 133, 0.22); border-color: var(--rose); }
+.hold-btn.active {
+  background: var(--rose);
+  border-color: #ffe4e6;
+  color: #16050a;
+  box-shadow: 0 0 18px rgba(251, 113, 133, 0.55);
+}
+.segmented.three-col { grid-template-columns: repeat(3, 1fr); }
+.badge.warn { background: rgba(251, 191, 36, 0.16); color: var(--amber); border-color: rgba(251, 191, 36, 0.4); }
+.badge.hold { background: rgba(251, 113, 133, 0.22); color: #fecdd3; border-color: rgba(251, 113, 133, 0.55); }
+.m-bar i.warn { background: linear-gradient(90deg, var(--amber), var(--rose)); }
+.dryrun-box {
+  margin: 0;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: rgba(6, 10, 16, 0.92);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  line-height: 1.42;
+  color: #bae6fd;
+  max-height: 155px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
 /* Responsive */
 @media (max-width: 1180px) {
   .studio-grid { grid-template-columns: 300px 1fr 310px; }

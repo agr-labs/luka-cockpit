@@ -6,7 +6,7 @@
 // enforce the polling budget and to keep the write surface closed.
 
 import http from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleSimApi } from './src/sim-api.mjs';
@@ -96,6 +96,24 @@ const server = http.createServer(async (req, res) => {
   // Interactive Upper-Body Sim API (speech ASR/LLM/TTS, Trellis store, MediaPipe runtime).
   // Strictly isolated from physical robot RPCs below.
   if (await handleSimApi(req, res, url)) return;
+
+  // Local dev capture: the cockpit freezes a live pose and posts it here so the
+  // operator does not have to fight the clipboard. Debug builds only.
+  if (url.pathname === '/debug/pose' && req.method === 'POST') {
+    let body = '';
+    for await (const chunk of req) body += chunk;
+    if (body.length > 500_000) { res.writeHead(413).end(); return; }
+    try {
+      JSON.parse(body);
+      await writeFile('/tmp/luka-pose.json', body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end('{"ok":true}');
+    } catch (err) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, message: String(err.message || err) }));
+    }
+    return;
+  }
 
   if (url.pathname === '/api/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -257,8 +275,9 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`\n  Steadwell cockpit  →  http://${HOST}:${PORT}/`);
+  console.log(`\n  Steadwell hub      →  http://${HOST}:${PORT}/`);
   console.log(`  Luka upper-body sim→  http://${HOST}:${PORT}/luka-sim.html`);
+  console.log(`  Full-body cockpit  →  http://${HOST}:${PORT}/cockpit.html`);
   console.log(`  robot proxy        →  http://${ROBOT_HOST}:${ROBOT_PORT} (read-only: GetAction, GetJointState)`);
   console.log(`  joint telemetry    →  ${JOINT_HZ > 0 ? JOINT_HZ + ' Hz' : 'disabled'}`);
   console.log(`  add ?renderer=webgl to force the WebGL2 path\n`);

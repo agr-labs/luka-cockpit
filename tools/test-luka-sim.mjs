@@ -8,7 +8,20 @@ import {
   applyHandCurlsToPose,
   LukaMotionController,
   UPPER_BODY_JOINTS,
+  GESTURE_NAMES,
 } from '../src/luka-motion.js';
+import {
+  VENDOR_HEAD_LIMITS,
+  VENDOR_ARM_HARD_LIMITS,
+  VENDOR_WRIST_YELLOW_ENVELOPE,
+  VENDOR_RATE_LIMITS,
+  clampRhombicWrist,
+  ActuatorSafetyLimiter,
+  simPoseToHardwarePacket,
+  hardwareTelemetryToSimPose,
+  validateHardwareCommandPacket,
+} from '../src/hw-safety.js';
+import { ARM_LIMITS, WRIST_ENVELOPE, HEAD_LIMITS } from '../gateway/lib/contract.mjs';
 import {
   agibotMaterialForLink,
   isLowerBodyLink,
@@ -18,6 +31,8 @@ import {
 import {
   OneEuro,
   P,
+  SAFE_NEUTRAL_JOINTS,
+  assessPoseTrackingQuality,
   extractFingerCurls,
   retargetPoseToLuka,
   sampleDemoTrackedFrame,
@@ -156,8 +171,8 @@ test('head lateral yaw, up/down pitch, spring-damper neck, OLED gaze lead, and K
   applySymmetricUpperBodyAxes(m);
   const yawLim = m.limits('idx27_head_joint1');
   const pitchLim = m.limits('idx28_head_joint2');
-  assert.ok(yawLim.upper >= 1.25 && yawLim.lower <= -1.25, 'wide natural lateral yaw range');
-  assert.ok(pitchLim.upper >= 0.58 && pitchLim.lower <= -0.55, 'wide natural up/down pitch range');
+  assert.deepEqual([yawLim.lower, yawLim.upper], [-0.785, 0.785], 'default hardware profile enforces AimDK §7.1.5-6 pan limits');
+  assert.deepEqual([pitchLim.lower, pitchLim.upper], [-0.401, 0.401], 'default hardware profile enforces AimDK §7.1.5-6 tilt limits');
 
   // Verify FK signs: +yaw faces viewer right (-Z), +pitch looks up (+Y)
   const zero = m.zeroPose();
@@ -165,33 +180,34 @@ test('head lateral yaw, up/down pitch, spring-damper neck, OLED gaze lead, and K
   const mRight = m.matrices.get('head_link02');
   assert.ok(mRight[2] < -0.4, '+yaw turns visor forward vector toward viewer right (-Z)');
 
-  m.forward({ ...zero, idx28_head_joint2: 0.45 });
+  m.forward({ ...zero, idx28_head_joint2: 0.35 });
   const mUp = m.matrices.get('head_link02');
-  assert.ok(mUp[1] > 0.35, '+pitch tilts visor forward vector upward (+Y)');
+  assert.ok(mUp[1] > 0.30, '+pitch tilts visor forward vector upward (+Y)');
 
-  // Verify spring-damper convergence & OLED eye gaze lead via setHeadGazeOverride
+  // Verify spring-damper convergence & OLED eye gaze lead via setHeadGazeOverride (inside hardware bounds)
   const ctrl = new LukaMotionController(m);
-  ctrl.setHeadGazeOverride(0.95, 0.48);
+  ctrl.setHeadGazeOverride(0.68, 0.34);
   let early = null;
   let settled = null;
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 120; i++) {
     const out = ctrl.step(1 / 60);
     if (i === 4) early = out;
     settled = out;
   }
   assert.ok(early.visorFx.eyeX > 0.25 && early.visorFx.eyeY > 0.2, 'OLED eyes lead head turn early');
-  assert.ok(Math.abs(settled.pose.idx27_head_joint1 - 0.95) < 0.04, 'spring-damper converges smoothly to lateral target');
-  assert.ok(Math.abs(settled.pose.idx28_head_joint2 - 0.48) < 0.04, 'spring-damper converges smoothly to pitch target');
+  assert.ok(Math.abs(settled.pose.idx27_head_joint1 - 0.68) < 0.04, 'spring-damper converges smoothly to lateral target');
+  assert.ok(Math.abs(settled.pose.idx28_head_joint2 - 0.34) < 0.04, 'spring-damper converges smoothly to pitch target');
 
-  // Verify shake_no and look_around head gestures produce full lateral + vertical travel
+  // Verify shake_no and look_around head gestures produce full lateral + vertical travel inside real neck bounds
   ctrl.clearHeadGazeOverride();
   assert.equal(ctrl.playGesture('shake_no'), true);
   let minYaw = 0;
   let maxYaw = 0;
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 140; i++) {
     const out = ctrl.step(1 / 60);
     minYaw = Math.min(minYaw, out.pose.idx27_head_joint1);
     maxYaw = Math.max(maxYaw, out.pose.idx27_head_joint1);
+    assert.ok(Math.abs(out.pose.idx27_head_joint1) <= 0.785 + 1e-6);
   }
   assert.ok(maxYaw > 0.35 && minYaw < -0.35, 'shake_no sweeps cleanly left and right');
 
@@ -200,17 +216,19 @@ test('head lateral yaw, up/down pitch, spring-damper neck, OLED gaze lead, and K
   let scanMaxY = 0;
   let scanMinP = 0;
   let scanMaxP = 0;
-  for (let i = 0; i < 240; i++) {
+  for (let i = 0; i < 260; i++) {
     const out = ctrl.step(1 / 60);
     scanMinY = Math.min(scanMinY, out.pose.idx27_head_joint1);
     scanMaxY = Math.max(scanMaxY, out.pose.idx27_head_joint1);
     scanMinP = Math.min(scanMinP, out.pose.idx28_head_joint2);
     scanMaxP = Math.max(scanMaxP, out.pose.idx28_head_joint2);
+    assert.ok(Math.abs(out.pose.idx27_head_joint1) <= 0.785 + 1e-6);
+    assert.ok(Math.abs(out.pose.idx28_head_joint2) <= 0.401 + 1e-6);
   }
-  assert.ok(scanMaxY > 0.55 && scanMinY < -0.55, 'look_around performs wide lateral sweep');
-  assert.ok(scanMaxP > 0.18 && scanMinP < -0.15, 'look_around performs clear up/down vertical sweep');
+  assert.ok(scanMaxY > 0.50 && scanMinY < -0.50, 'look_around performs wide lateral sweep within ±45°');
+  assert.ok(scanMaxP > 0.16 && scanMinP < -0.15, 'look_around performs clear up/down vertical sweep within ±23°');
 
-  // Verify Kameyoko head tracking horizontal & vertical signs match screen space
+  // Verify Kameyoko head tracking horizontal & vertical signs match screen space within real neck limits
   const base = sampleDemoTrackedFrame(1.0);
   const makeHeadFrame = (dx, dy, imgDx = 0, imgDy = 0) => {
     const f = structuredClone(base);
@@ -230,12 +248,108 @@ test('head lateral yaw, up/down pitch, spring-damper neck, OLED gaze lead, and K
   const lookUp = makeHeadFrame(0, 0.045, 0, -0.15);
   const lookDown = makeHeadFrame(0, -0.045, 0, 0.15);
 
-  assert.ok(lookRight.joints.idx27_head_joint1 > 0.5, 'turning right produces positive mirror yaw');
-  assert.ok(lookLeft.joints.idx27_head_joint1 < -0.5, 'turning left produces negative mirror yaw');
-  assert.ok(lookRight.headTarget.yaw > 0.3 && lookLeft.headTarget.yaw < -0.3, 'gaze follow tracks right/left without inversion');
-  assert.ok(lookUp.joints.idx28_head_joint2 > 0.35, 'tilting up produces strong positive pitch');
-  assert.ok(lookDown.joints.idx28_head_joint2 < -0.35, 'tilting down produces strong negative pitch');
-  assert.ok(lookUp.headTarget.pitch > lookDown.headTarget.pitch + 0.3, 'gaze follow tracks vertical height cleanly');
+  assert.ok(lookRight.joints.idx27_head_joint1 > 0.5 && lookRight.joints.idx27_head_joint1 <= 0.785, 'turning right produces positive mirror yaw within limit');
+  assert.ok(lookLeft.joints.idx27_head_joint1 < -0.5 && lookLeft.joints.idx27_head_joint1 >= -0.785, 'turning left produces negative mirror yaw within limit');
+  assert.ok(lookRight.headTarget.yaw > 0.25 && lookLeft.headTarget.yaw < -0.25, 'gaze follow tracks right/left without inversion');
+  assert.ok(lookUp.joints.idx28_head_joint2 > 0.30 && lookUp.joints.idx28_head_joint2 <= 0.401, 'tilting up produces strong positive pitch within limit');
+  assert.ok(lookDown.joints.idx28_head_joint2 < -0.30 && lookDown.joints.idx28_head_joint2 >= -0.401, 'tilting down produces strong negative pitch within limit');
+  assert.ok(lookUp.headTarget.pitch > lookDown.headTarget.pitch + 0.25, 'gaze follow tracks vertical height cleanly');
+});
+
+test('hardware safety module matches gateway contract, enforces rhombic wrists, speed/accel caps, and sim-to-real gates', () => {
+  // 1. Exact parity with AimDK §7.1.5-6 head envelope & gateway/lib/contract.mjs arm/wrist limits
+  assert.deepEqual([...VENDOR_HEAD_LIMITS.idx27_head_joint1], [-0.785, 0.785]);
+  assert.deepEqual([...VENDOR_HEAD_LIMITS.idx28_head_joint2], [-0.401, 0.401]);
+  assert.ok(VENDOR_HEAD_LIMITS.idx27_head_joint1[0] >= HEAD_LIMITS.joint1[0] && VENDOR_HEAD_LIMITS.idx27_head_joint1[1] <= HEAD_LIMITS.joint1[1], 'head pan stays inside gateway contract');
+  assert.ok(VENDOR_HEAD_LIMITS.idx28_head_joint2[0] >= HEAD_LIMITS.joint2[0] && VENDOR_HEAD_LIMITS.idx28_head_joint2[1] <= HEAD_LIMITS.joint2[1], 'head tilt stays inside gateway contract');
+  for (const [jn, bounds] of Object.entries(ARM_LIMITS)) {
+    assert.deepEqual([...VENDOR_ARM_HARD_LIMITS[jn]], bounds, `${jn} matches gateway contract`);
+  }
+  for (const [jn, bounds] of Object.entries(WRIST_ENVELOPE)) {
+    assert.deepEqual([...VENDOR_WRIST_YELLOW_ENVELOPE[jn]], bounds, `${jn} wrist envelope matches gateway contract`);
+  }
+
+  // 2. Rhombic parallel wrist coupling guard projects binding corners inside |j6|/0.30 + |j7|/0.20 <= 1.0
+  const corner = clampRhombicWrist(0.30, 0.20, 0.30, 0.20);
+  assert.equal(corner.clamped, true);
+  assert.ok(Math.abs(corner.j6) / 0.30 + Math.abs(corner.j7) / 0.20 <= 1.0 + 1e-9);
+  assert.ok(corner.j6 > 0 && corner.j7 > 0, 'preserves intended direction');
+
+  // 3. Worst-case step impulse (e.g. sudden Kameyoko jump) stays strictly below vendor speed & accel caps
+  for (const profileId of ['bringup', 'hardware']) {
+    const lim = new ActuatorSafetyLimiter(profileId);
+    const start = Object.fromEntries(UPPER_BODY_JOINTS.map((k) => [k, 0]));
+    start.idx16_left_arm_joint4 = -0.35;
+    start.idx23_right_arm_joint4 = 0.35;
+    lim.reset(start);
+
+    const impulse = { ...start, idx13_left_arm_joint1: 1.55, idx14_left_arm_joint2: -1.55, idx18_left_arm_joint6: 0.40, idx19_left_arm_joint7: 0.30, idx27_head_joint1: 1.20 };
+    for (let i = 0; i < 120; i++) {
+      const { pose, telemetry } = lim.step(impulse, 1 / 60);
+      assert.ok(telemetry.peakSpeedRadS <= VENDOR_RATE_LIMITS.maxSpeedRadPerSec + 0.05, `${profileId} speed (${telemetry.peakSpeedRadS}) <= 3.0`);
+      assert.ok(telemetry.peakAccelRadS2 <= VENDOR_RATE_LIMITS.maxAccelRadPerSec2 + 0.15, `${profileId} accel (${telemetry.peakAccelRadS2}) <= 6.28`);
+      assert.ok(Math.abs(pose.idx27_head_joint1) <= 0.785 + 1e-6);
+      assert.ok(Math.abs(pose.idx18_left_arm_joint6) / 0.30 + Math.abs(pose.idx19_left_arm_joint7) / 0.20 <= 1.0 + 1e-6);
+      assert.ok(pose.idx16_left_arm_joint4 <= -0.03 + 1e-6 && pose.idx23_right_arm_joint4 >= 0.03 - 1e-6);
+    }
+  }
+
+  // 4. ALL 15 gestures in hardware & bringup profiles strictly obey vendor limits, wrist diamond & < 3.0 rad/s
+  const m = new TwinModel(structuredClone(modelJson));
+  applySymmetricUpperBodyAxes(m, 'hardware');
+  for (const profileId of ['hardware', 'bringup']) {
+    for (const g of GESTURE_NAMES) {
+      const ctrl = new LukaMotionController(m);
+      ctrl.setSafetyProfile(profileId);
+      ctrl.playGesture(g);
+      for (let i = 0; i < 240; i++) {
+        const out = ctrl.step(1 / 60);
+        assert.ok(out.safety.peakSpeedRadS <= VENDOR_RATE_LIMITS.maxSpeedRadPerSec + 0.05, `${g} (${profileId}) speed safe`);
+        assert.ok(Math.abs(out.pose.idx27_head_joint1) <= 0.785 + 1e-6, `${g} pan within ±45°`);
+        assert.ok(Math.abs(out.pose.idx28_head_joint2) <= 0.401 + 1e-6, `${g} tilt within ±23°`);
+        assert.ok(out.pose.idx16_left_arm_joint4 <= -0.03 + 1e-6 && out.pose.idx23_right_arm_joint4 >= 0.03 - 1e-6, `${g} elbows clear of 0.03 stop`);
+        assert.ok(out.safety.wristLoadL <= 101 && out.safety.wristLoadR <= 101, `${g} wrists inside rhombic yellow envelope`);
+      }
+    }
+  }
+
+  // 5. Soft Hold freezes motion immediately with zero drift
+  const ctrlHold = new LukaMotionController(m);
+  ctrlHold.playGesture('wave');
+  for (let i = 0; i < 20; i++) ctrlHold.step(1 / 60);
+  ctrlHold.setSoftHold(true);
+  const snap = { ...ctrlHold.pose };
+  for (let i = 0; i < 30; i++) {
+    const out = ctrlHold.step(1 / 60);
+    assert.equal(out.safety.status, 'HOLD');
+    assert.equal(out.safety.peakSpeedRadS, 0);
+    assert.equal(out.pose.idx20_right_arm_joint1, snap.idx20_right_arm_joint1);
+  }
+
+  // 6. Sim -> Real hardware mapping flips neck pitch (-sim = real UP per 2026-11-06 evidence), maps 0..2000 hands & blocks unverified arms
+  const pkt = simPoseToHardwarePacket(
+    { idx27_head_joint1: 0.12, idx28_head_joint2: 0.15 },
+    { left: { thumbOpp: 0, thumb: 0, index: 0, middle: 0, ring: 0, pinky: 0 }, right: { thumbOpp: 1, thumb: 1, index: 1, middle: 1, ring: 1, pinky: 1 } },
+  );
+  assert.ok(pkt.neck.shake > 0.10, 'real neck yaw keeps +left sign');
+  assert.ok(pkt.neck.nod < -0.10, 'real neck pitch flips sign (- = look UP on physical Luka)');
+  assert.equal(pkt.hands.left.index_pos, 0);
+  assert.equal(pkt.hands.right.index_pos, 2000);
+
+  // Round-trip measured telemetry back into sim pose
+  const back = hardwareTelemetryToSimPose({ idx27_head_joint1: pkt.neck.shake, idx28_head_joint2: pkt.neck.nod });
+  assert.ok(Math.abs(back.idx27_head_joint1 - 0.12) < 1e-4 && Math.abs(back.idx28_head_joint2 - 0.15) < 1e-4);
+
+  // Pre-flight validator passes valid neck-only packet, refuses neck outside test envelope, and hard-blocks unverified arms
+  assert.equal(validateHardwareCommandPacket(pkt, { allowArms: false }).ok, true);
+  assert.equal(
+    validateHardwareCommandPacket(pkt, { startNeck: { yaw: 0, pitch: 0 }, allowArms: false }).ok,
+    false,
+    'refuses neck pitch > ±5° test envelope around start pose',
+  );
+  const armBlocked = validateHardwareCommandPacket(pkt, { allowArms: true });
+  assert.equal(armBlocked.ok, false, 'hard-blocks unverified arm joints');
+  assert.ok(armBlocked.errors.some((e) => e.code === 'joint_unverified'));
 });
 
 test('calibrated 3D hand positioning, joint-angle finger curls, mimic clamps, and anti-jitter filtering', () => {
@@ -323,6 +437,148 @@ test('calibrated 3D hand positioning, joint-angle finger curls, mimic clamps, an
   for (let i = 0; i < 45; i++) out = ctrl.step(1 / 60);
   assert.ok(out.hands.right.index < 0.1 && out.hands.right.middle < 0.1, 'peace keeps index & middle straight');
   assert.ok(out.hands.right.ring > 0.85 && out.hands.right.pinky > 0.85 && out.hands.right.thumbOpp > 0.65, 'peace curls ring, pinky & thumb');
+});
+
+test('Kameyoko tracking-loss failsafe prevents berserk arm/hand spazzing on occlusion, out-of-frame, glitches & dropout', () => {
+  const tracker = new KameyokoVisionTracker({ videoEl: null, overlayCanvas: null });
+  tracker.sourceMode = 'camera';
+  tracker.running = true;
+  const dt = 1 / 30;
+  let now = 1000;
+
+  // 1. Seated desk startup: arms cropped below webcam frame with hallucinated wild coords -> stays calm in RELAX
+  for (let i = 0; i < 12; i++) {
+    const f = structuredClone(sampleDemoTrackedFrame(1.0));
+    f.pose.vis[P.R_ELBOW] = 0.22;
+    f.pose.vis[P.R_WRIST] = 0.12;
+    f.pose.image[P.R_WRIST] = { x: 0.72, y: 1.18, z: 0 };
+    f.pose.world[P.R_ELBOW] = { x: (i % 2 ? 1.1 : -0.9), y: (i % 2 ? -1.2 : 0.8), z: (i % 2 ? -0.9 : 0.9) };
+    f.pose.world[P.R_WRIST] = { x: (i % 2 ? -1.4 : 1.3), y: (i % 2 ? 1.1 : -1.1), z: 0.7 };
+    // Also hallucinate off-screen hips
+    f.pose.vis[P.L_HIP] = 0.1;
+    f.pose.vis[P.R_HIP] = 0.1;
+    f.pose.image[P.L_HIP].y = 1.45;
+    f.pose.image[P.R_HIP].y = 1.45;
+    f.pose.world[P.L_HIP] = { x: -0.9, y: 0.2, z: 0.8 };
+    const res = tracker.processRawFrame(f.pose, f.hands, now, dt);
+    now += dt * 1000;
+    assert.equal(res.trackingState.leftArm, 'RELAX', 'cropped off-screen arm starts calmly in RELAX');
+    assert.ok(
+      Math.abs(res.joints.idx14_left_arm_joint2 - SAFE_NEUTRAL_JOINTS.idx14_left_arm_joint2) < 0.05,
+      'off-screen arm stays near safe neutral without spazzing',
+    );
+  }
+
+  // 2. Clean arm enters view -> requires 3-frame debounce, locks cleanly onto raised wave pose
+  let lockedOut = null;
+  for (let i = 0; i < 24; i++) {
+    const f = structuredClone(sampleDemoTrackedFrame(1.0)); // Phase 0: right arm raised waving -> Luka left arm
+    lockedOut = tracker.processRawFrame(f.pose, f.hands, now, dt);
+    now += dt * 1000;
+  }
+  assert.equal(lockedOut.trackingState.leftArm, 'LOCKED');
+  assert.equal(lockedOut.trackingState.rightArm, 'LOCKED');
+  const heldBeforeLoss = { ...lockedOut.joints };
+  assert.ok(heldBeforeLoss.idx13_left_arm_joint1 > 0.35, 'Luka left arm tracked raised human right arm');
+
+  // 3. Sudden MediaPipe loss + wildly thrashing hallucinated coordinates for 0.65s -> HOLD freezes pose (zero spaz!)
+  let prevOut = lockedOut;
+  for (let i = 0; i < 20; i++) {
+    const f = structuredClone(sampleDemoTrackedFrame(1.0));
+    f.pose.vis[P.R_ELBOW] = 0.18;
+    f.pose.vis[P.R_WRIST] = 0.10;
+    f.pose.world[P.R_ELBOW] = { x: (i % 2 ? 1.4 : -1.2), y: (i % 2 ? 0.9 : -1.3), z: (i % 2 ? 0.8 : -0.9) };
+    f.pose.world[P.R_WRIST] = { x: (i % 2 ? -1.5 : 1.5), y: (i % 2 ? -1.4 : 1.2), z: (i % 2 ? -1.1 : 1.0) };
+    const res = tracker.processRawFrame(f.pose, [f.hands[0]], now, dt);
+    now += dt * 1000;
+    assert.equal(res.trackingState.leftArm, 'HOLD', 'dropped arm enters HOLD immediately');
+    assert.equal(res.trackingState.rightArm, 'LOCKED', 'visible opposite arm continues tracking normally');
+    for (const k of ['idx13_left_arm_joint1', 'idx14_left_arm_joint2', 'idx15_left_arm_joint3', 'idx16_left_arm_joint4']) {
+      assert.ok(
+        Math.abs(res.joints[k] - prevOut.joints[k]) < 0.04,
+        `held joint ${k} does not spaz during wild MediaPipe hallucination`,
+      );
+    }
+    prevOut = res;
+  }
+
+  // 4. Sustained arm loss (> 0.9s) -> transitions HOLD -> RELAX and glides gently back toward neutral
+  let relaxedOut = prevOut;
+  for (let i = 0; i < 65; i++) {
+    const f = structuredClone(sampleDemoTrackedFrame(1.0));
+    f.pose.vis[P.R_ELBOW] = 0.15;
+    f.pose.vis[P.R_WRIST] = 0.10;
+    const res = tracker.processRawFrame(f.pose, [f.hands[0]], now, dt);
+    now += dt * 1000;
+    const maxStep = Math.max(
+      Math.abs(res.joints.idx13_left_arm_joint1 - relaxedOut.joints.idx13_left_arm_joint1),
+      Math.abs(res.joints.idx14_left_arm_joint2 - relaxedOut.joints.idx14_left_arm_joint2),
+      Math.abs(res.joints.idx16_left_arm_joint4 - relaxedOut.joints.idx16_left_arm_joint4),
+    );
+    assert.ok(maxStep / dt < 1.2, `relax drift stays gentle (${(maxStep / dt).toFixed(2)} rad/s < 1.2)`);
+    relaxedOut = res;
+  }
+  assert.equal(relaxedOut.trackingState.leftArm, 'RELAX');
+  assert.ok(
+    Math.abs(relaxedOut.joints.idx13_left_arm_joint1 - SAFE_NEUTRAL_JOINTS.idx13_left_arm_joint1) < 0.20,
+    'sustained loss smoothly returns arm toward calm resting neutral',
+  );
+
+  // 5. Re-lock cleanly, then inject a 1-frame teleport glitch & collapsed-bone glitch -> immediately rejected!
+  for (let i = 0; i < 24; i++) {
+    const f = structuredClone(sampleDemoTrackedFrame(1.0));
+    lockedOut = tracker.processRawFrame(f.pose, f.hands, now, dt);
+    now += dt * 1000;
+  }
+  assert.equal(lockedOut.trackingState.leftArm, 'LOCKED');
+
+  // Pure bone-length-preserving instant 180° flip across the shoulder -> caught by teleport_glitch
+  const teleportFrame = structuredClone(sampleDemoTrackedFrame(1.0));
+  const rSh = teleportFrame.pose.world[P.R_SHOULDER];
+  const rEl = teleportFrame.pose.world[P.R_ELBOW];
+  const rWr = teleportFrame.pose.world[P.R_WRIST];
+  teleportFrame.pose.world[P.R_ELBOW] = { x: 2 * rSh.x - rEl.x, y: 2 * rSh.y - rEl.y, z: 2 * rSh.z - rEl.z };
+  teleportFrame.pose.world[P.R_WRIST] = { x: 2 * rSh.x - rWr.x, y: 2 * rSh.y - rWr.y, z: 2 * rSh.z - rWr.z };
+  const afterTeleport = tracker.processRawFrame(teleportFrame.pose, teleportFrame.hands, now, dt);
+  now += dt * 1000;
+  assert.equal(afterTeleport.trackingState.leftArm, 'HOLD', 'single-frame teleport glitch rejected into HOLD');
+  assert.equal(afterTeleport.trackingState.leftReason, 'teleport_glitch');
+  assert.ok(Math.abs(afterTeleport.joints.idx13_left_arm_joint1 - lockedOut.joints.idx13_left_arm_joint1) < 0.05);
+
+  const collapsedFrame = structuredClone(sampleDemoTrackedFrame(1.0));
+  collapsedFrame.pose.world[P.L_WRIST] = { ...collapsedFrame.pose.world[P.L_ELBOW], y: collapsedFrame.pose.world[P.L_ELBOW].y + 0.02 };
+  const qBad = assessPoseTrackingQuality(collapsedFrame.pose);
+  assert.equal(qBad.arms[0].valid, false);
+  assert.equal(qBad.arms[0].reason, 'bad_bone_len');
+
+  // 6. Hand-only dropout while arm stays visible -> no abrupt 1-frame wrist or finger snap
+  for (let i = 0; i < 20; i++) {
+    const f = structuredClone(sampleDemoTrackedFrame(13.5)); // curled fists
+    lockedOut = tracker.processRawFrame(f.pose, f.hands, now, dt);
+    now += dt * 1000;
+  }
+  let prevHand = lockedOut;
+  for (let i = 0; i < 45; i++) {
+    const f = structuredClone(sampleDemoTrackedFrame(13.5));
+    const res = tracker.processRawFrame(f.pose, [], now, dt); // both 21-pt hands dropped
+    now += dt * 1000;
+    const fingerJump = Math.abs(res.hands.left.index - prevHand.hands.left.index);
+    const wristJump = Math.abs(res.joints.idx17_left_arm_joint5 - prevHand.joints.idx17_left_arm_joint5);
+    assert.ok(fingerJump < 0.09, `hand dropout never snaps fingers (jump=${fingerJump.toFixed(3)})`);
+    assert.ok(wristJump < 0.12, `hand dropout never snaps forearm roll (jump=${wristJump.toFixed(3)})`);
+    prevHand = res;
+  }
+  assert.equal(prevHand.trackingState.leftHand, 'RELAX');
+
+  // 7. Complete pose loss (person walks out of frame) -> HOLD then smooth RELAX
+  let lostOut = prevHand;
+  for (let i = 0; i < 65; i++) {
+    lostOut = tracker.processRawFrame(null, [], now, dt);
+    now += dt * 1000;
+  }
+  assert.equal(lostOut.trackingState.pose, 'RELAX');
+  assert.equal(lostOut.trackingState.leftArm, 'RELAX');
+  assert.equal(lostOut.trackingState.rightArm, 'RELAX');
 });
 
 test('Trellis unbounded context guarantees token budget at scale and discovers emergent skills', () => {

@@ -22,7 +22,6 @@
       <span class="brand-dot"></span>
       <div>
         <strong>LUKA <span class="accent">UPPER-BODY SIM</span></strong>
-        <small>AGIBOT A2 ULTRA · SPEECH · KAMEYOKO VISION · TRELLIS CONTEXT</small>
       </div>
     </div>
 
@@ -30,10 +29,13 @@
       <span class="pill"><i id="speechDot" class="dot"></i><span id="speechPill">SPEECH …</span></span>
       <span class="pill"><i id="visionDot" class="dot"></i><span id="visionPill">VISION OFF</span></span>
       <span class="pill"><i class="dot on-cyan"></i><span id="trellisPill">TRELLIS 0</span></span>
+      <button type="button" id="safetyPillBtn" class="pill pill-btn" title="Open Hardware Safety Envelope & Dry-Run Inspector"><i id="safetyDot" class="dot on"></i><span id="safetyPill">HW SPEC</span></button>
+      <button type="button" id="softHoldBtn" class="hold-btn" title="Freeze all upper-body motion cleanly in place (shortcut: H)">SOFT HOLD</button>
       <span class="sep"></span>
       <span id="rendererChip" class="chip">…</span>
       <span id="fpsChip" class="chip">– fps</span>
-      <a href="./index.html" class="nav-link" title="Open Full Telemetry Cockpit">Full Cockpit ↗</a>
+      <a href="./" class="nav-link" title="Back to Steadwell App Hub">← Hub</a>
+      <a href="./cockpit.html" class="nav-link" title="Open Full Telemetry Cockpit">Full Cockpit ↗</a>
     </div>
   </header>
 
@@ -205,21 +207,21 @@
             <span id="headPadReadout" class="mono tiny accent">0° · 0°</span>
           </div>
           <div id="headPad" class="head-pad" role="application" aria-label="2D Head Pan and Tilt Control">
-            <span class="hp-axis hp-top">UP +35°</span>
-            <span class="hp-axis hp-bot">DOWN -33°</span>
-            <span class="hp-axis hp-left">← -75°</span>
-            <span class="hp-axis hp-right">+75° →</span>
+            <span id="hpTop" class="hp-axis hp-top">UP +23°</span>
+            <span id="hpBot" class="hp-axis hp-bot">DOWN -23°</span>
+            <span id="hpLeft" class="hp-axis hp-left">← -45°</span>
+            <span id="hpRight" class="hp-axis hp-right">+45° →</span>
             <div class="hp-cross-h"></div>
             <div class="hp-cross-v"></div>
             <div id="headTargetDot" class="hp-dot target" hidden></div>
             <div id="headLiveDot" class="hp-dot live"></div>
           </div>
           <div class="head-quick-row">
-            <button type="button" class="chip-btn" data-head-preset="-55,0">← Left</button>
-            <button type="button" class="chip-btn" data-head-preset="0,28">↑ Up</button>
+            <button type="button" class="chip-btn" data-head-preset="-40,0">← Left</button>
+            <button type="button" class="chip-btn" data-head-preset="0,20">↑ Up</button>
             <button type="button" class="chip-btn" data-head-preset="0,0">Center</button>
-            <button type="button" class="chip-btn" data-head-preset="0,-28">↓ Down</button>
-            <button type="button" class="chip-btn" data-head-preset="55,0">Right →</button>
+            <button type="button" class="chip-btn" data-head-preset="0,-20">↓ Down</button>
+            <button type="button" class="chip-btn" data-head-preset="40,0">Right →</button>
           </div>
           <div class="head-quick-row">
             <button type="button" class="chip-btn" data-head-gesture="nod">Nod</button>
@@ -360,8 +362,32 @@
         </section>
       </div>
 
-      <!-- TAB 3: EMERGENT CAPABILITIES & MANUAL UPPER-BODY DOF -->
+      <!-- TAB 3: HARDWARE SAFETY, EMERGENT CAPABILITIES & MANUAL UPPER-BODY DOF -->
       <div class="tab-pane" data-pane="skills">
+        <section class="card">
+          <div class="card-head">
+            <h2>Actuator Hardware Envelope</h2>
+            <span id="safetyStatusBadge" class="badge live">NOMINAL</span>
+          </div>
+          <div class="segmented three-col" role="group" aria-label="Actuator safety profile">
+            <button type="button" class="seg-btn" data-safety-profile="bringup" title="Conservative first-test limits: <= 0.85 rad/s, <= 2.5 rad/s²">Bring-Up</button>
+            <button type="button" class="seg-btn active" data-safety-profile="hardware" title="Documented AimDK §7.1.5-9 AgiBot A2 Ultra envelope (80% speed/accel margin + rhombic wrist guard)">HW Spec</button>
+            <button type="button" class="seg-btn" data-safety-profile="studio" title="Expanded visual sim range — exceeds real neck/wrist hardware limits">Studio</button>
+          </div>
+          <div class="meter-grid">
+            <div class="m-row"><span>Peak Speed</span><div class="m-bar"><i id="safeSpdBar"></i></div><b id="safeSpdVal">0.0 r/s</b></div>
+            <div class="m-row"><span>Peak Accel</span><div class="m-bar"><i id="safeAccBar"></i></div><b id="safeAccVal">0.0 r/s²</b></div>
+            <div class="m-row"><span>L Wrist Rhombic</span><div class="m-bar"><i id="safeWristLBar"></i></div><b id="safeWristLVal">0%</b></div>
+            <div class="m-row"><span>R Wrist Rhombic</span><div class="m-bar"><i id="safeWristRBar"></i></div><b id="safeWristRVal">0%</b></div>
+          </div>
+          <div id="safetyClampsNote" class="status-note">All joints inside AimDK §7.1.5–9 envelope · physical writes closed</div>
+          <div class="btn-row">
+            <button type="button" id="btnDryRunPacket" class="btn xs">Inspect Dry-Run HW Packet</button>
+            <button type="button" id="btnSoftHoldCard" class="btn ghost xs">Soft Hold (H)</button>
+          </div>
+          <pre id="dryRunBox" class="dryrun-box" hidden></pre>
+        </section>
+
         <section class="card">
           <div class="card-head">
             <h2>Teach Emergent Skill</h2>

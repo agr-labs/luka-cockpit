@@ -9,6 +9,11 @@
 //   - Taught / Emergent pose playback and manual slider overrides
 
 import { clamp, damp, lerp } from './mathx.js';
+import {
+  ActuatorSafetyLimiter,
+  SAFETY_PROFILES,
+  SIM_HARDWARE_LIMITS,
+} from './hw-safety.js';
 
 export const UPPER_BODY_JOINTS = [
   'idx27_head_joint1',
@@ -49,47 +54,29 @@ export const JOINT_LABELS = {
 };
 
 /**
- * Configure symmetric 3-DOF shoulders and comfortable simulation limits on a
+ * Configure symmetric 3-DOF shoulders and hardware-faithful limits on a
  * TwinModel instance without mutating the generated model files on disk.
  */
-export function applySymmetricUpperBodyAxes(model) {
+export function applySymmetricUpperBodyAxes(model, profileId = 'hardware') {
   const byName = new Map(model.joints.map((j) => [j.name, j]));
+  const profile = SAFETY_PROFILES[profileId] || SAFETY_PROFILES.hardware;
+  const limTable = profile.limits || SIM_HARDWARE_LIMITS;
+
   const j13 = byName.get('idx13_left_arm_joint1');
   const j14 = byName.get('idx14_left_arm_joint2');
   const j20 = byName.get('idx20_right_arm_joint1');
   const j21 = byName.get('idx21_right_arm_joint2');
-  const j27 = byName.get('idx27_head_joint1');
-  const j28 = byName.get('idx28_head_joint2');
 
-  if (j13) {
-    // Pure coronal lateral abduction (world +X axis in left_arm_link01 frame -> zero forward drift)
-    j13.axis = [0, 0, -1];
-    j13.lower = -0.35;
-    j13.upper = 1.95;
-  }
-  if (j14) {
-    j14.axis = [-1, 0, 0];
-    j14.lower = -1.95;
-    j14.upper = 0.65;
-  }
-  if (j20) {
-    // Pure coronal lateral abduction mirrored for right arm
-    j20.axis = [0, 0, 1];
-    j20.lower = -0.35;
-    j20.upper = 1.95;
-  }
-  if (j21) {
-    j21.axis = [1, 0, 0];
-    j21.lower = -1.95;
-    j21.upper = 0.65;
-  }
-  if (j27) {
-    j27.lower = -1.32;
-    j27.upper = 1.32;
-  }
-  if (j28) {
-    j28.lower = -0.58;
-    j28.upper = 0.62;
+  if (j13) j13.axis = [0, 0, -1]; // Pure coronal lateral abduction
+  if (j14) j14.axis = [-1, 0, 0];
+  if (j20) j20.axis = [0, 0, 1];  // Mirrored coronal lateral abduction
+  if (j21) j21.axis = [1, 0, 0];
+
+  for (const [jn, [lo, hi]] of Object.entries(limTable)) {
+    const j = byName.get(jn);
+    if (!j) continue;
+    j.lower = lo;
+    j.upper = hi;
   }
 }
 
@@ -172,7 +159,7 @@ const GESTURE_DEFS = {
   wave: {
     duration: 3.4,
     sample(t) {
-      const waveOsc = Math.sin(t * 7.2);
+      const waveOsc = Math.sin(t * 4.6);
       return {
         joints: {
           idx27_head_joint1: -0.10 + 0.04 * Math.sin(t * 2.5),
@@ -224,14 +211,14 @@ const GESTURE_DEFS = {
   },
 
   nod: {
-    duration: 2.3,
+    duration: 2.6,
     sample(t) {
-      // Crisp 2-beat affirmative up/down nod (-22° to +15°)
-      const nodWave = Math.sin(t * 6.2 - 0.4);
+      // Crisp 2-beat affirmative up/down nod within real A2 neck accel (< 5.0 rad/s²)
+      const nodWave = Math.sin(t * 4.0 - 0.3);
       return {
         joints: {
           idx27_head_joint1: 0.05 * Math.sin(t * 1.8),
-          idx28_head_joint2: -0.08 + 0.30 * nodWave,
+          idx28_head_joint2: -0.04 + 0.28 * nodWave,
           idx13_left_arm_joint1: 0.12,
           idx14_left_arm_joint2: -0.25,
           idx16_left_arm_joint4: -0.78,
@@ -245,14 +232,14 @@ const GESTURE_DEFS = {
   },
 
   shake_no: {
-    duration: 2.4,
+    duration: 2.7,
     sample(t) {
-      // Natural lateral head shake left/right (±32°)
-      const shake = Math.sin(t * 7.4);
+      // Natural lateral head shake left/right (±30°) tuned inside real A2 neck accel (< 5.0 rad/s²)
+      const shake = Math.sin(t * 3.1);
       return {
         joints: {
-          idx27_head_joint1: 0.56 * shake,
-          idx28_head_joint2: -0.05 + 0.04 * Math.cos(t * 3.7),
+          idx27_head_joint1: 0.54 * shake,
+          idx28_head_joint2: -0.04 + 0.04 * Math.cos(t * 3.1),
           idx13_left_arm_joint1: 0.14,
           idx14_left_arm_joint2: -0.22,
           idx16_left_arm_joint4: -0.68,
@@ -268,35 +255,35 @@ const GESTURE_DEFS = {
   look_around: {
     duration: 4.4,
     sample(t) {
-      // Expressive full-range lateral & vertical scan: left+up -> right+down -> up-center -> center
+      // Full-range scan inside AimDK §7.1.5-6 real neck bounds (±0.74 rad yaw, -0.24..+0.30 rad pitch)
       const u = clamp(t / 4.4, 0, 1);
       let yaw = 0;
       let pitch = 0;
       if (u < 0.28) {
         const k = u / 0.28;
-        yaw = lerp(0, 0.88, k);
-        pitch = lerp(0, 0.28, k);
+        yaw = lerp(0, 0.72, k);
+        pitch = lerp(0, 0.24, k);
       } else if (u < 0.64) {
         const k = (u - 0.28) / 0.36;
-        yaw = lerp(0.88, -0.88, k);
-        pitch = lerp(0.28, -0.24, Math.sin(k * Math.PI));
+        yaw = lerp(0.72, -0.72, k);
+        pitch = lerp(0.24, -0.24, Math.sin(k * Math.PI));
       } else if (u < 0.84) {
         const k = (u - 0.64) / 0.20;
-        yaw = lerp(-0.88, 0.12, k);
-        pitch = lerp(-0.14, 0.32, Math.sin(k * Math.PI));
+        yaw = lerp(-0.72, 0.10, k);
+        pitch = lerp(-0.14, 0.28, Math.sin(k * Math.PI));
       } else {
         const k = (u - 0.84) / 0.16;
-        yaw = lerp(0.12, 0, k);
-        pitch = lerp(0.06, 0, k);
+        yaw = lerp(0.10, 0, k);
+        pitch = lerp(0.05, 0, k);
       }
       return {
         joints: {
           idx27_head_joint1: yaw,
           idx28_head_joint2: pitch,
-          idx13_left_arm_joint1: 0.10,
+          idx13_left_arm_joint1: 0.06,
           idx14_left_arm_joint2: -0.14,
           idx16_left_arm_joint4: -0.42,
-          idx20_right_arm_joint1: 0.10,
+          idx20_right_arm_joint1: 0.06,
           idx21_right_arm_joint2: -0.14,
           idx23_right_arm_joint4: 0.42,
         },
@@ -310,21 +297,21 @@ const GESTURE_DEFS = {
     sample(t) {
       return {
         joints: {
-          idx27_head_joint1: 0.38 + 0.08 * Math.sin(t * 1.4),
-          idx28_head_joint2: 0.26 + 0.05 * Math.cos(t * 1.8),
-          idx20_right_arm_joint1: 0.18,
-          idx21_right_arm_joint2: -0.74,
-          idx22_right_arm_joint3: 0.62,
-          idx23_right_arm_joint4: 1.88,
-          idx24_right_arm_joint5: 0.55,
-          idx13_left_arm_joint1: 0.10,
+          idx27_head_joint1: 0.36 + 0.07 * Math.sin(t * 1.4),
+          idx28_head_joint2: 0.24 + 0.05 * Math.cos(t * 1.8),
+          idx20_right_arm_joint1: 0.16,
+          idx21_right_arm_joint2: -0.72,
+          idx22_right_arm_joint3: 0.58,
+          idx23_right_arm_joint4: 1.82,
+          idx24_right_arm_joint5: 0.50,
+          idx13_left_arm_joint1: 0.06,
           idx14_left_arm_joint2: -0.28,
-          idx15_left_arm_joint3: 0.45,
-          idx16_left_arm_joint4: -1.15,
+          idx15_left_arm_joint3: 0.42,
+          idx16_left_arm_joint4: -1.12,
         },
         hands: {
-          left: { thumb: 0.35, index: 0.35, middle: 0.40, ring: 0.45, pinky: 0.48 },
-          right: { thumb: 0.25, index: 0.18, middle: 0.58, ring: 0.68, pinky: 0.72 },
+          left: { thumbOpp: 0.32, thumb: 0.32, index: 0.34, middle: 0.40, ring: 0.44, pinky: 0.48 },
+          right: { thumbOpp: 0.24, thumb: 0.22, index: 0.18, middle: 0.58, ring: 0.68, pinky: 0.72 },
         },
       };
     },
@@ -335,7 +322,7 @@ const GESTURE_DEFS = {
     sample(t) {
       return {
         joints: {
-          idx27_head_joint1: 0.74,
+          idx27_head_joint1: 0.68,
           idx28_head_joint2: 0.08,
           idx13_left_arm_joint1: 0.62,
           idx14_left_arm_joint2: -0.82,
@@ -359,7 +346,7 @@ const GESTURE_DEFS = {
     sample(t) {
       return {
         joints: {
-          idx27_head_joint1: -0.74,
+          idx27_head_joint1: -0.68,
           idx28_head_joint2: 0.08,
           idx20_right_arm_joint1: 0.62,
           idx21_right_arm_joint2: -0.82,
@@ -384,8 +371,8 @@ const GESTURE_DEFS = {
       const ripple = (offset) => 0.45 + 0.42 * Math.sin(t * 4.5 + offset);
       return {
         joints: {
-          idx27_head_joint1: 0.24 * Math.sin(t * 1.4),
-          idx28_head_joint2: -0.38,
+          idx27_head_joint1: 0.22 * Math.sin(t * 1.4),
+          idx28_head_joint2: -0.34,
           idx13_left_arm_joint1: 0.08,
           idx14_left_arm_joint2: -0.68,
           idx15_left_arm_joint3: 0.42,
@@ -567,6 +554,32 @@ export class LukaMotionController {
     this.nextBlinkAt = 2.4;
     this.blinkValue = 0;
     this.blinkPhase = 0;
+
+    // Real-time actuator hardware safety limiter (default: documented AgiBot A2 Ultra envelope)
+    this.safety = new ActuatorSafetyLimiter('hardware');
+    this.safety.reset(this.pose);
+  }
+
+  setSafetyProfile(profileId) {
+    if (!this.safety.setProfile(profileId)) return false;
+    applySymmetricUpperBodyAxes(this.model, profileId);
+    return true;
+  }
+
+  getSafetyProfile() {
+    return this.safety.profile;
+  }
+
+  setSoftHold(enabled) {
+    this.safety.setSoftHold(enabled);
+    if (enabled) {
+      this.headYawVel = 0;
+      this.headPitchVel = 0;
+    }
+  }
+
+  isSoftHold() {
+    return this.safety.softHold;
   }
 
   setMode(mode) {
@@ -587,9 +600,11 @@ export class LukaMotionController {
   }
 
   setHeadGazeOverride(yawRad, pitchRad) {
+    const yawLim = this.model.limits('idx27_head_joint1');
+    const pitchLim = this.model.limits('idx28_head_joint2');
     this.headGazeOverride = {
-      yaw: clamp(yawRad, -1.32, 1.32),
-      pitch: clamp(pitchRad, -0.58, 0.62),
+      yaw: clamp(yawRad, yawLim?.lower ?? -0.785, yawLim?.upper ?? 0.785),
+      pitch: clamp(pitchRad, pitchLim?.lower ?? -0.401, pitchLim?.upper ?? 0.401),
     };
   }
 
@@ -919,26 +934,40 @@ export class LukaMotionController {
       this.pose[j.name] = damp(this.pose[j.name] ?? 0, this.target[j.name] ?? 0, isWrist ? wristStiffness : armStiffness, dt);
     }
 
+    // 8. Final real-time hardware safety limiter (position + rhombic wrist + velocity/accel + soft hold)
+    const safeOut = this.safety.step(this.pose, dt, { preFiltered: true });
+    for (const k of UPPER_BODY_JOINTS) {
+      this.pose[k] = safeOut.pose[k];
+    }
+    // Sync spring velocities with physical limiter to prevent windup against hardware speed/accel caps
+    this.headYawVel = this.safety.vel.idx27_head_joint1 ?? 0;
+    this.headPitchVel = this.safety.vel.idx28_head_joint2 ?? 0;
+
     for (const side of ['left', 'right']) {
       for (const f of FINGER_KEYS) {
-        this.hands[side][f] = damp(this.hands[side][f] ?? 0.24, this.targetHands[side][f] ?? 0.24, fingerStiffness, dt);
+        if (!this.safety.softHold) {
+          this.hands[side][f] = damp(this.hands[side][f] ?? 0.24, this.targetHands[side][f] ?? 0.24, fingerStiffness, dt);
+        }
       }
     }
     applyHandCurlsToPose(this.model, this.pose, this.hands);
 
-    const stateMode = this.trackingMode === 'mirror'
-      ? 4
-      : this.mode === 'speaking'
-        ? 3
-        : this.mode === 'thinking'
-          ? 2
-          : this.mode === 'listening'
-            ? 1
-            : 0;
+    const stateMode = this.safety.softHold
+      ? 1
+      : this.trackingMode === 'mirror'
+        ? 4
+        : this.mode === 'speaking'
+          ? 3
+          : this.mode === 'thinking'
+            ? 2
+            : this.mode === 'listening'
+              ? 1
+              : 0;
 
     return {
       pose: this.pose,
       hands: this.hands,
+      safety: safeOut.telemetry,
       visorFx: {
         time: this.time,
         speechLevel: this.speechLevel,
