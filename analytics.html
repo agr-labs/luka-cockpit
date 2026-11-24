@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#05070b" />
+  <meta name="robots" content="noindex, follow" />
+  <title>Steadwell · Luka v. A2U Analytics</title>
+  <meta name="description" content="Privacy-first usage, motion, vision, and safety envelope analytics for Luka v. A2U." />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="stylesheet" href="./landing.css" />
+  <style>
+    .an-head { padding: 40px 0 28px; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; }
+    .an-head h1 { margin: 0 0 6px; font-size: clamp(26px, 3.6vw, 38px); font-weight: 600; letter-spacing: -0.03em; }
+    .an-head p { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 56ch; }
+    .an-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .seg-group { display: inline-flex; padding: 3px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,0.025); }
+    .seg-btn { border: 0; background: transparent; color: var(--ink-2); font-family: var(--font-mono); font-size: 11.5px; padding: 6px 11px; border-radius: 7px; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+    .seg-btn[aria-pressed="true"] { background: rgba(255,255,255,0.1); color: var(--ink); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .kpi-card { padding: 16px 18px; border-radius: 14px; background: var(--bg-glass); border: 1px solid var(--line); }
+    .kpi-card span { display: block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--ink-3); text-transform: uppercase; margin-bottom: 6px; }
+    .kpi-card b { font-family: var(--font-mono); font-size: 24px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .kpi-card small { display: block; margin-top: 4px; font-size: 11.5px; color: var(--ink-3); }
+    .panel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .panel-card { padding: 20px 22px; border-radius: 16px; background: var(--bg-glass); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+    .panel-card.wide { grid-column: 1 / -1; }
+    .panel-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .panel-top h2 { margin: 0; font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em; }
+    .panel-sub { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+    .bar-list { display: flex; flex-direction: column; gap: 9px; }
+    .bar-row { display: grid; grid-template-columns: minmax(110px, 1.1fr) minmax(80px, 1.8fr) auto; align-items: center; gap: 10px; font-size: 12.5px; }
+    .bar-name { font-family: var(--font-mono); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { height: 7px; border-radius: 999px; background: rgba(255,255,255,0.05); overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, rgba(56,217,245,0.55), var(--cyan)); transition: width 0.5s var(--ease-out); }
+    .bar-fill.emerald { background: linear-gradient(90deg, rgba(52,211,153,0.55), var(--emerald)); }
+    .bar-fill.amber { background: linear-gradient(90deg, rgba(245,185,66,0.55), var(--amber)); }
+    .bar-val { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink); font-variant-numeric: tabular-nums; min-width: 32px; text-align: right; }
+    .timeline-bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding-top: 10px; }
+    .t-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+    .t-bar { width: 100%; max-width: 34px; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, var(--cyan), rgba(56,217,245,0.22)); min-height: 3px; transition: height 0.45s var(--ease-out); }
+    .t-lbl { font-family: var(--font-mono); font-size: 10px; color: var(--ink-3); white-space: nowrap; }
+    .empty-note { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); padding: 10px 0; }
+    .stat-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .stat-chip { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,0.025); font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); }
+    .stat-chip b { color: var(--ink); margin-left: 4px; }
+    .privacy-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,0.02); margin-top: 20px; font-size: 12.5px; color: var(--ink-2); }
+    .toggle-opt { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11.5px; cursor: pointer; color: var(--ink); }
+    @media (max-width: 1024px) { .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 720px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .panel-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop-glow"></div>
+    <div class="backdrop-grid"></div>
+  </div>
+
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="wrap topbar-inner">
+        <a class="brand" href="./" aria-label="Steadwell Luka Home">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+          <span class="brand-text">
+            <strong>STEADWELL</strong>
+            <small>LUKA · v. A2U ANALYTICS</small>
+          </span>
+        </a>
+        <nav class="nav-links" aria-label="Navigation">
+          <a href="./#studios">Studios</a>
+          <a href="./#fleet">Fleet</a>
+          <a href="./#vita">VITA Edge</a>
+          <a href="./analytics.html" style="color:var(--ink)">Analytics</a>
+        </nav>
+        <div class="top-right">
+          <a href="https://vaultbots.com" target="_blank" rel="noopener" class="nav-ext">Buy Luka ↗</a>
+          <span class="suite-pill">
+            <i id="storageDot" class="pulse-dot" data-state="sim"></i>
+            <span id="storageBadge">LOADING…</span>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <div class="an-head">
+          <div>
+            <div class="eyebrow"><i></i>PRIVACY-FIRST TELEMETRY · LEARNING SIGNALS</div>
+            <h1>Usage, Motion &amp; Safety Analytics</h1>
+            <p>
+              Aggregated metrics from Hub, Upper-Body Sim, and Cockpit sessions — zero raw speech text,
+              zero PII, exportable as JSONL or CSV to tune gestures, Kameyoko vision, and AimDK safety bounds.
+            </p>
+          </div>
+
+          <div class="an-controls">
+            <div class="seg-group" role="group" aria-label="Time range">
+              <button class="seg-btn" data-days="1" aria-pressed="false">24h</button>
+              <button class="seg-btn" data-days="7" aria-pressed="true">7d</button>
+              <button class="seg-btn" data-days="30" aria-pressed="false">30d</button>
+            </div>
+            <button id="btnRefresh" class="btn btn-compact" type="button">Refresh</button>
+            <a id="btnExportJsonl" class="btn btn-compact" href="#">Export JSONL</a>
+            <a id="btnExportCsv" class="btn btn-compact" href="#">Export CSV</a>
+          </div>
+        </div>
+
+        <section class="kpi-grid" aria-label="Overview KPIs">
+          <div class="kpi-card"><span>Sessions</span><b id="kpiSessions">—</b><small id="kpiEvents">— events</small></div>
+          <div class="kpi-card"><span>Dialogue Turns</span><b id="kpiTurns">—</b><small id="kpiLlmMs">Avg LLM —</small></div>
+          <div class="kpi-card"><span>Gestures Played</span><b id="kpiGestures">—</b><small id="kpiClaims">— Trellis claims</small></div>
+          <div class="kpi-card"><span>Vision Sessions</span><b id="kpiVision">—</b><small id="kpiGuard">— failsafe holds</small></div>
+          <div class="kpi-card"><span>Avg Frame Rate</span><b id="kpiFps">—</b><small id="kpiRenderer">Renderer —</small></div>
+          <div class="kpi-card"><span>Safety Events</span><b id="kpiHolds">—</b><small id="kpiPeakWrist">Peak wrist —</small></div>
+        </section>
+
+        <section class="panel-grid" style="padding-bottom: 44px;">
+          <article class="panel-card wide">
+            <div class="panel-top">
+              <h2>Daily Activity</h2>
+              <span class="panel-sub" id="timelineMeta">—</span>
+            </div>
+            <div class="timeline-bars" id="timelineBars"></div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-top">
+              <h2>Top Gestures &amp; Skills</h2>
+              <span class="panel-sub">manual + LLM + taught</span>
+            </div>
+            <div class="bar-list" id="gesturesList"></div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-top">
+              <h2>App Launches &amp; Surface Mix</h2>
+              <span class="panel-sub">hub cards &amp; page traffic</span>
+            </div>
+            <div class="bar-list" id="launchesList"></div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-top">
+              <h2>Kameyoko Vision Reliability</h2>
+              <span class="panel-sub">failsafe guard reasons</span>
+            </div>
+            <div class="stat-chips" id="visionChips"></div>
+            <div class="bar-list" id="visionGuardList"></div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-top">
+              <h2>AimDK Hardware Safety Envelope</h2>
+              <span class="panel-sub">profiles, peak loads &amp; clamps</span>
+            </div>
+            <div class="stat-chips" id="safetyChips"></div>
+            <div class="bar-list" id="safetyClampsList"></div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-top">
+              <h2>Speech &amp; Reasoning Pipeline</h2>
+              <span class="panel-sub">modes, models &amp; latencies</span>
+            </div>
+            <div class="stat-chips" id="speechChips"></div>
+            <div class="bar-list" id="speechModesList"></div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-top">
+              <h2>Trellis Memory, Recordings &amp; Renderers</h2>
+              <span class="panel-sub">emergent skills &amp; WebGPU adoption</span>
+            </div>
+            <div class="bar-list" id="trellisPerfList"></div>
+          </article>
+        </section>
+
+        <div class="privacy-bar">
+          <span>
+            Privacy posture: ephemeral per-tab session IDs only · no raw transcripts, voice audio, camera frames, cookies, or IPs stored.
+          </span>
+          <label class="toggle-opt">
+            <input type="checkbox" id="optOutCheck" />
+            Pause telemetry in this browser
+          </label>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer" style="margin-top:32px">
+      <span class="corner-mark tl" aria-hidden="true"></span>
+      <span class="corner-mark tr" aria-hidden="true"></span>
+      <div class="wrap footer-inner">
+        <div class="footer-left">
+          <span>STEADWELL · LUKA v. A2U</span>
+          <span>·</span>
+          <span id="generatedAt">WAITING FOR SUMMARY…</span>
+        </div>
+        <div class="footer-keys">
+          <a href="https://steadwell.solutions/products/vita-edge" target="_blank" rel="noopener">Steadwell VITA ↗</a>
+          <span>·</span>
+          <a href="./">← Back to Hub</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="./src/analytics.js"></script>
+</body>
+</html>

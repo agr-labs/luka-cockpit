@@ -13,9 +13,12 @@ The same source runs in two environments, and they behave differently on purpose
 | Twin, playback, presets, sliders | full | full |
 | Boot detection | `meta[name=luka-env]` marker | `/api/health` probe |
 
-Detection happens once at boot in `src/env.js` and never throws. A static build carries
-`<meta name="luka-env" content="static">`, stamped by `tools/package-site.mjs`, so it never
-fires a probe that would 404 in a visitor's console.
+Detection happens once at boot in `src/env.js`, `src/landing.js`, `src/luka-sim.js`, and
+`src/trellis-engine.js`, and never throws. A static build carries
+`<meta name="luka-env" content="static">`, stamped by `tools/package-site.mjs` onto
+`index.html` (Application Hub), `cockpit.html` (52-DOF Twin), and `luka-sim.html`
+(Upper-Body Embodied Sim), so visitors never fire `/api/*`, `/sim-api/*`, or localhost
+port probes that would 404 in the console.
 
 ## What CI does
 
@@ -91,11 +94,11 @@ per-asset** limit, failing the build if anything exceeds it.
 
 | File | Size |
 |---|---|
-| `model/generated/luka.mesh.bin` | 22.04 MB ← largest, 4.2 MB of headroom |
+| `model/generated/luka.mesh.bin` | 20.37 MB ← largest, 5.85 MB of headroom |
 | `model/recordings/*.a2rec` | 6.39 / 6.32 / 4.64 MB |
-| everything else | < 100 KB |
+| everything else | < 200 KB |
 
-Total ≈ 39.6 MB across 29 files. The mesh is served as one binary and parsed on the GPU
+Total ≈ 38.7 MB across 61 files (including the Application Hub `/`, Upper-Body Sim `/luka-sim.html`, and Full-Body Cockpit `/cockpit.html`). The mesh is served as one binary and parsed on the GPU
 side; the recordings are fetched on demand when a user presses play.
 
 If the mesh ever grows past the limit, the options in order of preference: quantise

@@ -28,7 +28,9 @@ the local proxy talking to an A2 on the same network.
 
 | Capability | State | Notes |
 |---|---|---|
-| Digital twin render | **works** | WebGPU + WebGL2 verified, 306k tris, 30–60 fps |
+| Application hub (`/`) | **works** | animated dark-glass launcher linking all 8 sim, voice, gateway & telemetry apps |
+| Upper-body embodied sim (`/luka-sim.html`) | **works** | obsidian OLED head, Whisper/Inworld speech, Kameyoko tracking + anti-spaz failsafe, Trellis memory & AimDK hardware safety envelope |
+| Full-body digital twin (`/cockpit.html`) | **works** | WebGPU + WebGL2 verified, 306k tris, 30–60 fps |
 | Twin kinematics | **verified** | matches MuJoCo to 3.0e-7 m across 49 bodies |
 | Luka telemetry (read) | **works** | `GetAction` at 0.2 Hz + `GetJointState` at 5 Hz |
 | Live twin mirroring | **works** | 26 body + 2 neck joints + 12 finger channels, real time |
@@ -37,7 +39,7 @@ the local proxy talking to an A2 on the same network.
 | Arm command transport | **blocked** | needs a process on the robot (ROS 2 / SSH) |
 | Arm joint feedback | **solved** | `McDataService/GetJointState`, 26 joints @ 5 Hz |
 | Head / hands telemetry | **works** | `GetNeckState` (2 joints), `GetHandState` (12 channels) |
-| Finger rendering | **approximate** | 12 position channels mapped absolute (0 open → 2000 closed); geometry is synthetic boxes |
+| Finger rendering | **works, approximate** | 6 channels → RH56 hand joints (12 with mimic); geometry is decimated MIT RH56, scaled to the A2 envelope |
 | Motion action gate | **closed** | Luka is in `McAction_DEFAULT`, which forbids arm commands |
 | Physical motion | **disabled** | `config/arm-schema.json` → `enabled: false` |
 | Static deploy | **works** | Cloudflare Pages, SIM mode, no gateway needed |
@@ -111,6 +113,7 @@ answer to "can anything move him through the API" is no, twice over.
 
 | Doc | What's in it |
 |---|---|
+| [docs/luka-sim.md](docs/luka-sim.md) | application hub, upper-body embodied sim, hardware safety envelope & Kameyoko tracking-loss failsafe |
 | [docs/interface-notes.md](docs/interface-notes.md) | every interface fact we have, its source, and what is still unknown |
 | [docs/runbook.md](docs/runbook.md) | power-on, health checks, cockpit start, troubleshooting, first-motion protocol |
 | [docs/safety.md](docs/safety.md) | authority model, stop semantics, what each guard actually proved |
@@ -183,8 +186,15 @@ numeric check.
 ## Layout
 
 ```
-index.html · styles.css
-src/main.js        UI, render loop, presets, playback controls, arm panel
+index.html · landing.css · src/landing.js       Steadwell · Luka v. A2U application hub (/)
+luka-sim.html · luka-sim.css · src/luka-sim.js  Upper-body embodied sim (/luka-sim.html)
+  src/upper-renderer.js                         AgiBot upper-body skin + glossy black OLED visor
+  src/luka-motion.js                            Expressive upper-body choreography + RH56 hands
+  src/hw-safety.js                              AimDK limits, rhombic wrist guard, braking limiter & dry-run mapper
+  src/kameyoko-tracker.js                       MediaPipe 3D pose + 21-pt hands + LOCKED/HOLD/RELAX failsafe
+  src/trellis-engine.js                         Trellis TRP-1/TVP-1 memory + emergent Teach-by-Pose skills
+  src/sim-api.mjs                               Local Whisper ASR, LLM reasoning & Inworld/Say TTS bridge
+cockpit.html · styles.css · src/main.js         Full-body 52-DOF digital twin (/cockpit.html)
 src/model.js       FK over the generated joint tree, limits, clamping
 src/renderer.js    WebGPU (WGSL, 4× MSAA) + WebGL2 (GLSL ES 3.0), per-link draws
 src/armcontrol.js  arm command layer, limit intersection, action gate, transports
@@ -192,13 +202,13 @@ src/a2rec.js       A2REC1 parser + playback clock
 src/env.js         sim/local detection (meta marker or /api/health probe)
 src/link.js        0.2 Hz telemetry poll
 src/safety.js      authority state machine, deadman, watchdog, clamps
-serve.mjs          static server + coalescing read-only AimDK proxy
-config/            arm-schema.json (the interlock)
+serve.mjs          static server + coalescing read-only AimDK proxy + /sim-api/*
+config/            arm-schema.json (the interlock), luka-voice.json
 robot-bridge/      arm_bridge.py — on-robot publisher, 100 Hz, holds on expiry
-tools/             build-model · package-site · mc (rate-limited RPC) · mj_reference ·
+tools/             build-model · package-site · test-luka-sim · mc · mj_reference ·
                    verify-fk · fetch-model · onrobot-probe
-docs/              interface notes · sdk notes · runbook · safety · decisions · deploy
-model/             vendored URDF, meshes, recordings, provenance, build report
+docs/              luka-sim · interface notes · sdk notes · runbook · safety · decisions · deploy
+model/             vendored URDF, meshes, RH56 hands, recordings, provenance, build report
 ```
 
 `model/meshes/`, `model/recordings/`, `model/generated/`, `model/mjcf/` are gitignored

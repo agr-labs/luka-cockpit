@@ -12,7 +12,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_hand_base.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_hand_base.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -22,7 +22,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_hand_base.STL"/>
+        <mesh filename="left_hand_base.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -43,7 +43,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_index_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_index_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -53,7 +53,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_index_1.STL"/>
+        <mesh filename="left_index_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -71,7 +71,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_index_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_index_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -81,7 +81,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_index_2.STL"/>
+        <mesh filename="left_index_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -99,7 +99,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_index_pad.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_index_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -109,7 +109,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_index_pad.STL"/>
+        <mesh filename="left_index_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -127,7 +127,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_index_rubber_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_index_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -137,7 +137,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_index_rubber_1.STL"/>
+        <mesh filename="left_index_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -155,7 +155,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_index_rubber_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_index_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -165,7 +165,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_index_rubber_2.STL"/>
+        <mesh filename="left_index_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -183,7 +183,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_index_tip.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_index_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -193,7 +193,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_index_tip.STL"/>
+        <mesh filename="left_index_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -211,7 +211,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_little_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_little_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -221,7 +221,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_little_1.STL"/>
+        <mesh filename="left_little_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -239,7 +239,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_little_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_little_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -249,7 +249,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_little_2.STL"/>
+        <mesh filename="left_little_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -267,7 +267,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_little_pad.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_little_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -277,7 +277,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_little_pad.STL"/>
+        <mesh filename="left_little_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -295,7 +295,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_little_rubber_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_little_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -305,7 +305,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_little_rubber_1.STL"/>
+        <mesh filename="left_little_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -323,7 +323,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_little_rubber_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_little_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -333,7 +333,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_little_rubber_2.STL"/>
+        <mesh filename="left_little_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -351,7 +351,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_little_tip.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_little_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -361,7 +361,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_little_tip.STL"/>
+        <mesh filename="left_little_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -379,7 +379,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_middle_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_middle_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -389,7 +389,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_middle_1.STL"/>
+        <mesh filename="left_middle_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -407,7 +407,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_middle_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_middle_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -417,7 +417,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_middle_2.STL"/>
+        <mesh filename="left_middle_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -435,7 +435,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_middle_pad.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_middle_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -445,7 +445,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_middle_pad.STL"/>
+        <mesh filename="left_middle_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -463,7 +463,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_middle_rubber_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_middle_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -473,7 +473,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_middle_rubber_1.STL"/>
+        <mesh filename="left_middle_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -491,7 +491,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_middle_rubber_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_middle_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -501,7 +501,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_middle_rubber_2.STL"/>
+        <mesh filename="left_middle_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -519,7 +519,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_middle_tip.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_middle_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -529,7 +529,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_middle_tip.STL"/>
+        <mesh filename="left_middle_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -547,7 +547,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_palm.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_palm.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -557,7 +557,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_palm.STL"/>
+        <mesh filename="left_palm.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -575,7 +575,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_ring_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_ring_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -585,7 +585,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_ring_1.STL"/>
+        <mesh filename="left_ring_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -603,7 +603,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_ring_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_ring_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -613,7 +613,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_ring_2.STL"/>
+        <mesh filename="left_ring_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -631,7 +631,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_ring_pad.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_ring_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -641,7 +641,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_ring_pad.STL"/>
+        <mesh filename="left_ring_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -659,7 +659,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_ring_rubber_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_ring_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -669,7 +669,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_ring_rubber_1.STL"/>
+        <mesh filename="left_ring_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -687,7 +687,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_ring_rubber_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_ring_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -697,7 +697,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_ring_rubber_2.STL"/>
+        <mesh filename="left_ring_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -715,7 +715,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_ring_tip.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_ring_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -725,7 +725,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_ring_tip.STL"/>
+        <mesh filename="left_ring_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -744,7 +744,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_thumb_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_thumb_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -754,7 +754,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_thumb_1.STL"/>
+        <mesh filename="left_thumb_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -776,7 +776,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_thumb_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_thumb_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -786,7 +786,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_thumb_2.STL"/>
+        <mesh filename="left_thumb_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -805,7 +805,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_thumb_3.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_thumb_3.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -815,7 +815,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_thumb_3.STL"/>
+        <mesh filename="left_thumb_3.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -833,7 +833,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_thumb_4.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_thumb_4.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -843,7 +843,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_thumb_4.STL"/>
+        <mesh filename="left_thumb_4.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -861,7 +861,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_thumb_pad.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_thumb_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -871,7 +871,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_thumb_pad.STL"/>
+        <mesh filename="left_thumb_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -890,7 +890,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_thumb_rubber_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_thumb_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -900,7 +900,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_thumb_rubber_1.STL"/>
+        <mesh filename="left_thumb_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -918,7 +918,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_thumb_rubber_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_thumb_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -928,7 +928,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_thumb_rubber_2.STL"/>
+        <mesh filename="left_thumb_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -946,7 +946,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_thumb_rubber_3.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_thumb_rubber_3.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -956,7 +956,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_thumb_rubber_3.STL"/>
+        <mesh filename="left_thumb_rubber_3.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -974,7 +974,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="left_thumb_tip.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/left/visual/left_thumb_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -984,7 +984,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/left/collision/left_thumb_tip.STL"/>
+        <mesh filename="left_thumb_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1003,7 +1003,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_hand_base.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_hand_base.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1013,7 +1013,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_hand_base.STL"/>
+        <mesh filename="right_hand_base.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1034,7 +1034,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_index_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_index_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1044,7 +1044,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_index_1.STL"/>
+        <mesh filename="right_index_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1062,7 +1062,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_index_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_index_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1072,7 +1072,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_index_2.STL"/>
+        <mesh filename="right_index_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1090,7 +1090,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_index_pad.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_index_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1100,7 +1100,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_index_pad.STL"/>
+        <mesh filename="right_index_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1118,7 +1118,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_index_rubber_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_index_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1128,7 +1128,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_index_rubber_1.STL"/>
+        <mesh filename="right_index_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1146,7 +1146,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_index_rubber_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_index_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1156,7 +1156,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_index_rubber_2.STL"/>
+        <mesh filename="right_index_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1174,7 +1174,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_index_tip.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_index_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1184,7 +1184,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_index_tip.STL"/>
+        <mesh filename="right_index_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1202,7 +1202,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_little_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_little_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1212,7 +1212,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_little_1.STL"/>
+        <mesh filename="right_little_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1230,7 +1230,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_little_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_little_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1240,7 +1240,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_little_2.STL"/>
+        <mesh filename="right_little_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1258,7 +1258,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_little_pad.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_little_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1268,7 +1268,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_little_pad.STL"/>
+        <mesh filename="right_little_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1286,7 +1286,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_little_rubber_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_little_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1296,7 +1296,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_little_rubber_1.STL"/>
+        <mesh filename="right_little_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1314,7 +1314,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_little_rubber_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_little_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1324,7 +1324,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_little_rubber_2.STL"/>
+        <mesh filename="right_little_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1342,7 +1342,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_little_tip.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_little_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1352,7 +1352,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_little_tip.STL"/>
+        <mesh filename="right_little_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1370,7 +1370,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_middle_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_middle_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1380,7 +1380,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_middle_1.STL"/>
+        <mesh filename="right_middle_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1398,7 +1398,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_middle_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_middle_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1408,7 +1408,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_middle_2.STL"/>
+        <mesh filename="right_middle_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1426,7 +1426,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_middle_pad.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_middle_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1436,7 +1436,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_middle_pad.STL"/>
+        <mesh filename="right_middle_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1454,7 +1454,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_middle_rubber_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_middle_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1464,7 +1464,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_middle_rubber_1.STL"/>
+        <mesh filename="right_middle_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1482,7 +1482,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_middle_rubber_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_middle_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1492,7 +1492,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_middle_rubber_2.STL"/>
+        <mesh filename="right_middle_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1510,7 +1510,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_middle_tip.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_middle_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1520,7 +1520,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_middle_tip.STL"/>
+        <mesh filename="right_middle_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1538,7 +1538,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_palm.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_palm.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1548,7 +1548,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_palm.STL"/>
+        <mesh filename="right_palm.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1566,7 +1566,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_ring_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_ring_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1576,7 +1576,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_ring_1.STL"/>
+        <mesh filename="right_ring_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1594,7 +1594,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_ring_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_ring_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1604,7 +1604,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_ring_2.STL"/>
+        <mesh filename="right_ring_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1622,7 +1622,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_ring_pad.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_ring_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1632,7 +1632,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_ring_pad.STL"/>
+        <mesh filename="right_ring_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1650,7 +1650,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_ring_rubber_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_ring_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1660,7 +1660,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_ring_rubber_1.STL"/>
+        <mesh filename="right_ring_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1678,7 +1678,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_ring_rubber_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_ring_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1688,7 +1688,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_ring_rubber_2.STL"/>
+        <mesh filename="right_ring_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1706,7 +1706,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_ring_tip.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_ring_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1716,7 +1716,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_ring_tip.STL"/>
+        <mesh filename="right_ring_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1735,7 +1735,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_thumb_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_thumb_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1745,7 +1745,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_thumb_1.STL"/>
+        <mesh filename="right_thumb_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1767,7 +1767,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_thumb_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_thumb_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1777,7 +1777,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_thumb_2.STL"/>
+        <mesh filename="right_thumb_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1796,7 +1796,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_thumb_3.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_thumb_3.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1806,7 +1806,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_thumb_3.STL"/>
+        <mesh filename="right_thumb_3.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1824,7 +1824,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_thumb_4.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_thumb_4.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 1 1 1"/>
@@ -1834,7 +1834,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_thumb_4.STL"/>
+        <mesh filename="right_thumb_4.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1852,7 +1852,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_thumb_pad.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_thumb_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1862,7 +1862,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_thumb_pad.STL"/>
+        <mesh filename="right_thumb_pad.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1881,7 +1881,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_thumb_rubber_1.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_thumb_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1891,7 +1891,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_thumb_rubber_1.STL"/>
+        <mesh filename="right_thumb_rubber_1.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1909,7 +1909,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_thumb_rubber_2.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_thumb_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1919,7 +1919,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_thumb_rubber_2.STL"/>
+        <mesh filename="right_thumb_rubber_2.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1937,7 +1937,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_thumb_rubber_3.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_thumb_rubber_3.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1947,7 +1947,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_thumb_rubber_3.STL"/>
+        <mesh filename="right_thumb_rubber_3.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>
@@ -1965,7 +1965,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="right_thumb_tip.STL"/>
+        <mesh filename="package://rh56dfx_description/meshes/right/visual/right_thumb_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1"/>
@@ -1975,7 +1975,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://rh56dfx_description/meshes/right/collision/right_thumb_tip.STL"/>
+        <mesh filename="right_thumb_tip.STL"/>
       </geometry>
       <material name="">
         <color rgba="1 0 0 1"/>

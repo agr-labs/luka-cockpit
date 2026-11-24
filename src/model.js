@@ -37,6 +37,7 @@ export class TwinModel {
     this.meta = json.meta;
     this.links = json.links;
     this.joints = json.joints;
+    this.hand = json.hand ?? null;
     this.baseY = json.meta.baseY;
     this.children = new Map();       // link -> joint
     for (const j of this.joints) this.children.set(j.child, j);

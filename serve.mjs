@@ -6,9 +6,10 @@
 // enforce the polling budget and to keep the write surface closed.
 
 import http from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { handleSimApi } from './src/sim-api.mjs';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -49,14 +50,21 @@ let inFlight = false;
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
   '.ico': 'image/x-icon',
   '.bin': 'application/octet-stream',
   '.a2rec': 'application/octet-stream',
   '.stl': 'model/stl',
+  '.wasm': 'application/wasm',
   '.md': 'text/markdown; charset=utf-8',
 };
 
@@ -89,6 +97,28 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204).end(); return; }
 
   const url = new URL(req.url, `http://${req.headers.host}`);
+
+  // Interactive Upper-Body Sim API (speech ASR/LLM/TTS, Trellis store, MediaPipe runtime).
+  // Strictly isolated from physical robot RPCs below.
+  if (await handleSimApi(req, res, url)) return;
+
+  // Local dev capture: the cockpit freezes a live pose and posts it here so the
+  // operator does not have to fight the clipboard. Debug builds only.
+  if (url.pathname === '/debug/pose' && req.method === 'POST') {
+    let body = '';
+    for await (const chunk of req) body += chunk;
+    if (body.length > 500_000) { res.writeHead(413).end(); return; }
+    try {
+      JSON.parse(body);
+      await writeFile('/tmp/luka-pose.json', body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end('{"ok":true}');
+    } catch (err) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, message: String(err.message || err) }));
+    }
+    return;
+  }
 
   if (url.pathname === '/api/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -229,7 +259,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Static files
+  // Static files (with HTTP Range support for smooth <video> seeking in Safari/Chrome)
   let pathname = decodeURIComponent(url.pathname);
   if (pathname === '/') pathname = '/index.html';
   const filePath = normalize(join(ROOT, pathname));
@@ -237,11 +267,35 @@ const server = http.createServer(async (req, res) => {
   try {
     const st = await stat(filePath);
     if (!st.isFile()) throw new Error('not a file');
+    const contentType = MIME[extname(filePath)] || 'application/octet-stream';
+    const cacheControl = CACHEABLE.test(filePath) ? 'private, max-age=3600' : 'no-store';
+    const rangeHeader = req.headers.range;
+    if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+      const [startStr, endStr] = rangeHeader.replace(/^bytes=/, '').split('-');
+      const start = startStr ? Math.max(0, Number.parseInt(startStr, 10)) : 0;
+      const end = endStr ? Math.min(st.size - 1, Number.parseInt(endStr, 10)) : st.size - 1;
+      if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= st.size) {
+        res.writeHead(416, { 'Content-Range': `bytes */${st.size}` }).end();
+        return;
+      }
+      const data = await readFile(filePath);
+      const slice = data.subarray(start, end + 1);
+      res.writeHead(206, {
+        'Content-Type': contentType,
+        'Content-Length': slice.length,
+        'Content-Range': `bytes ${start}-${end}/${st.size}`,
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': cacheControl,
+      });
+      res.end(slice);
+      return;
+    }
     const data = await readFile(filePath);
     res.writeHead(200, {
-      'Content-Type': MIME[extname(filePath)] || 'application/octet-stream',
+      'Content-Type': contentType,
       'Content-Length': st.size,
-      'Cache-Control': CACHEABLE.test(filePath) ? 'private, max-age=3600' : 'no-store',
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': cacheControl,
     });
     res.end(data);
   } catch {
@@ -250,7 +304,9 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`\n  Steadwell cockpit  →  http://${HOST}:${PORT}/`);
+  console.log(`\n  Steadwell hub      →  http://${HOST}:${PORT}/`);
+  console.log(`  Luka upper-body sim→  http://${HOST}:${PORT}/luka-sim.html`);
+  console.log(`  Full-body cockpit  →  http://${HOST}:${PORT}/cockpit.html`);
   console.log(`  robot proxy        →  http://${ROBOT_HOST}:${ROBOT_PORT} (read-only: GetAction, GetJointState)`);
   console.log(`  joint telemetry    →  ${JOINT_HZ > 0 ? JOINT_HZ + ' Hz' : 'disabled'}`);
   console.log(`  add ?renderer=webgl to force the WebGL2 path\n`);
