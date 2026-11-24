@@ -13,6 +13,7 @@ export const ALLOWED_CATEGORIES = new Set([
   'vision',
   'safety',
   'trellis',
+  'media',
   'perf',
   'error',
 ]);
@@ -34,6 +35,7 @@ export const ALLOWED_EVENTS = new Set([
   'hand_preset',
   'hand_calibrate',
   'recording_play',
+  'reel_interaction',
   'camera_preset',
   'telemetry_connect',
   'runtime_error',

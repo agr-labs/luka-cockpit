@@ -55,6 +55,11 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
   '.ico': 'image/x-icon',
   '.bin': 'application/octet-stream',
   '.a2rec': 'application/octet-stream',
@@ -254,7 +259,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Static files
+  // Static files (with HTTP Range support for smooth <video> seeking in Safari/Chrome)
   let pathname = decodeURIComponent(url.pathname);
   if (pathname === '/') pathname = '/index.html';
   const filePath = normalize(join(ROOT, pathname));
@@ -262,11 +267,35 @@ const server = http.createServer(async (req, res) => {
   try {
     const st = await stat(filePath);
     if (!st.isFile()) throw new Error('not a file');
+    const contentType = MIME[extname(filePath)] || 'application/octet-stream';
+    const cacheControl = CACHEABLE.test(filePath) ? 'private, max-age=3600' : 'no-store';
+    const rangeHeader = req.headers.range;
+    if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+      const [startStr, endStr] = rangeHeader.replace(/^bytes=/, '').split('-');
+      const start = startStr ? Math.max(0, Number.parseInt(startStr, 10)) : 0;
+      const end = endStr ? Math.min(st.size - 1, Number.parseInt(endStr, 10)) : st.size - 1;
+      if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= st.size) {
+        res.writeHead(416, { 'Content-Range': `bytes */${st.size}` }).end();
+        return;
+      }
+      const data = await readFile(filePath);
+      const slice = data.subarray(start, end + 1);
+      res.writeHead(206, {
+        'Content-Type': contentType,
+        'Content-Length': slice.length,
+        'Content-Range': `bytes ${start}-${end}/${st.size}`,
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': cacheControl,
+      });
+      res.end(slice);
+      return;
+    }
     const data = await readFile(filePath);
     res.writeHead(200, {
-      'Content-Type': MIME[extname(filePath)] || 'application/octet-stream',
+      'Content-Type': contentType,
       'Content-Length': st.size,
-      'Cache-Control': CACHEABLE.test(filePath) ? 'private, max-age=3600' : 'no-store',
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': cacheControl,
     });
     res.end(data);
   } catch {

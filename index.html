@@ -85,6 +85,7 @@
         </div>
 
         <nav class="nav-links" aria-label="Primary navigation">
+          <a href="#reel">Reel</a>
           <a href="#studios">Studios</a>
           <a href="#fleet">Fleet</a>
           <a href="#vita">VITA Edge</a>
@@ -109,6 +110,7 @@
         <div class="wrap mobile-nav-inner">
           <div class="mobile-nav-group">
             <span class="mobile-nav-label">Navigate</span>
+            <a href="#reel" data-mobile-close>Live Hardware Reel</a>
             <a href="#studios" data-mobile-close>Interactive Studios</a>
             <a href="#fleet" data-mobile-close>Fleet Roster</a>
             <a href="#vita" data-mobile-close>Steadwell VITA Companion</a>
@@ -177,42 +179,213 @@
             </div>
           </div>
 
-          <!-- Interactive Obsidian OLED Visor Medallion -->
-          <div class="visor-stage" aria-label="Luka interactive obsidian head preview">
-            <div class="visor-orbit-wrap">
-              <div class="orbit-ring outer" aria-hidden="true"></div>
-              <div class="orbit-ring mid" aria-hidden="true"><span class="orbit-node"></span></div>
-              <div class="orbit-ring inner" aria-hidden="true"></div>
-
-              <div class="luka-head-shell">
-                <div class="luka-visor-glass">
-                  <div class="oled-eyes" id="oledEyes">
-                    <span class="oled-eye"></span>
-                    <span class="oled-eye"></span>
-                  </div>
-                  <div class="oled-wave" aria-hidden="true">
-                    <i></i><i></i><i></i><i></i><i></i>
-                  </div>
-                </div>
-              </div>
+          <!-- Interactive Tap-and-Hold Luka Obsidian Visor Medallion -->
+          <div class="visor-stage" id="visorStage" data-chat-phase="idle" data-mood="neutral" aria-label="Interactive Luka voice chat head">
+            <div class="visor-top">
+              <span class="visor-live-pill">
+                <i class="visor-state-dot" aria-hidden="true"></i>
+                <span id="heroChatStatus">HOLD HEAD TO CHAT</span>
+              </span>
+              <button type="button" class="visor-icon-btn" id="heroMuteBtn" aria-pressed="false" data-muted="false" title="Mute Luka voice" aria-label="Toggle Luka voice audio">
+                <svg class="icon-sound-on" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                </svg>
+                <svg class="icon-sound-off" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <line x1="23" y1="9" x2="17" y2="15" />
+                  <line x1="17" y1="9" x2="23" y2="15" />
+                </svg>
+              </button>
             </div>
 
-            <div class="visor-caption">
-              <strong>LUKA · INTERACTIVE HEAD</strong>
-              <span>MOVE CURSOR TO LOOK</span>
+            <button type="button" class="visor-orbit-wrap visor-trigger" id="lukaHeadTrigger" aria-pressed="false" aria-label="Press and hold Luka's head to talk">
+              <span class="sonar-ring r1" aria-hidden="true"></span>
+              <span class="sonar-ring r2" aria-hidden="true"></span>
+              <span class="orbit-ring outer" aria-hidden="true"></span>
+              <span class="orbit-ring mid" aria-hidden="true"><span class="orbit-node"></span></span>
+              <span class="orbit-ring inner" aria-hidden="true"></span>
+
+              <span class="luka-head-shell" id="lukaHeadShell">
+                <span class="luka-visor-glass">
+                  <span class="oled-eyes" id="oledEyes">
+                    <span class="oled-eye left"></span>
+                    <span class="oled-eye right"></span>
+                  </span>
+                  <span class="oled-wave" id="oledWave" aria-hidden="true">
+                    <i></i><i></i><i></i><i></i><i></i>
+                  </span>
+                </span>
+              </span>
+            </button>
+
+            <div class="hero-speech-bubble" aria-live="polite">
+              <span class="hero-bubble-user" id="heroBubbleUser" hidden></span>
+              <p class="hero-bubble-text" id="heroBubbleText">Hey! Hold my visor to talk — or tap a prompt below.</p>
+            </div>
+
+            <div class="hero-chat-controls">
+              <button type="button" class="hero-talk-btn" id="heroTalkBtn" data-phase="idle">
+                <span class="hero-talk-mic" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                </span>
+                <span id="heroTalkLabel">Hold to Talk</span>
+                <span class="hero-talk-hint">Hold or Tap</span>
+              </button>
+
+              <div class="hero-prompts" aria-label="Quick prompts for Luka">
+                <button type="button" class="hero-prompt-chip" data-hero-prompt="Hey Luka, say hi!">Say hi</button>
+                <button type="button" class="hero-prompt-chip" data-hero-prompt="Tell me a quick robot joke">Tell a joke</button>
+                <button type="button" class="hero-prompt-chip" data-hero-prompt="Tell me about pairing you with Steadwell VITA">About VITA</button>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- SECTION 01: INTERACTIVE STUDIOS FOR ACTIVE BOT -->
+      <!-- SECTION 01: LUKA LIVE HARDWARE VIDEO REEL -->
+      <section class="section-band reel-section" id="reel">
+        <span class="corner-mark tl" aria-hidden="true"></span>
+        <span class="corner-mark tr" aria-hidden="true"></span>
+        <div class="wrap">
+          <div class="reel-grid">
+            <div class="reel-device-col">
+              <div class="reel-aura" aria-hidden="true"></div>
+              <div class="reel-frame" id="reelFrame" data-playing="false" data-muted="true">
+                <video
+                  id="lukaReelVideo"
+                  src="./media/luka-reel.mp4"
+                  poster="./media/luka-reel-poster.jpg"
+                  playsinline
+                  muted
+                  loop
+                  preload="metadata"
+                  aria-label="Luka v. A2U live hardware reel"
+                ></video>
+
+                <div class="reel-hud-top">
+                  <span class="reel-live-badge"><i aria-hidden="true"></i>REAL HARDWARE · A2U</span>
+                  <span class="reel-time-pill" id="reelTime">0:00 / 0:29</span>
+                </div>
+
+                <button type="button" class="reel-sound-cta" id="reelSoundCta" aria-label="Turn sound on for Luka video">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                  </svg>
+                  <span>Tap for Sound</span>
+                </button>
+
+                <div class="reel-controls">
+                  <button type="button" class="reel-ctrl-btn" id="reelPlayBtn" aria-label="Play or pause video">
+                    <svg class="icon-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4" /></svg>
+                    <svg class="icon-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+                  </button>
+
+                  <div class="reel-scrub" id="reelScrub" role="slider" tabindex="0" aria-label="Video timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div class="reel-scrub-track">
+                      <div class="reel-scrub-fill" id="reelProgressFill"></div>
+                    </div>
+                  </div>
+
+                  <button type="button" class="reel-ctrl-btn" id="reelMuteBtn" aria-label="Mute or unmute video">
+                    <svg class="icon-vol-on" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    </svg>
+                    <svg class="icon-vol-off" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <line x1="22" y1="9" x2="16" y2="15" />
+                      <line x1="16" y1="9" x2="22" y2="15" />
+                    </svg>
+                  </button>
+
+                  <button type="button" class="reel-ctrl-btn" id="reelFsBtn" aria-label="Fullscreen video">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="15 3 21 3 21 9" />
+                      <polyline points="9 21 3 21 3 15" />
+                      <line x1="21" y1="3" x2="14" y2="10" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="reel-copy">
+              <span class="section-index">01 · LUKA IN THE REAL WORLD</span>
+              <h2 class="reel-title">
+                Out of the sim.<br />
+                <span class="muted-line">Into the room.</span>
+              </h2>
+              <p class="reel-desc">
+                Luka isn’t just a 3D concept. Watch full AgiBot A2 Ultra hardware greeting guests, turning heads in the showroom,
+                and walking the red carpet with his signature cyan OLED visor.
+              </p>
+
+              <div class="reel-chapters-head">JUMP TO A MOMENT</div>
+              <div class="reel-chapters" id="reelChapters">
+                <button type="button" class="reel-chapter is-active" data-seek="0" data-end="10">
+                  <span class="ch-time">0:00</span>
+                  <span class="ch-body">
+                    <strong>Showroom Entrance</strong>
+                    <small>Stepping out in full A2 Ultra hardware</small>
+                  </span>
+                  <span class="ch-play" aria-hidden="true">▶</span>
+                </button>
+                <button type="button" class="reel-chapter" data-seek="10" data-end="20">
+                  <span class="ch-time">0:10</span>
+                  <span class="ch-body">
+                    <strong>Crowd &amp; Floor Moments</strong>
+                    <small>Live handshakes &amp; guest reactions</small>
+                  </span>
+                  <span class="ch-play" aria-hidden="true">▶</span>
+                </button>
+                <button type="button" class="reel-chapter" data-seek="20" data-end="26">
+                  <span class="ch-time">0:20</span>
+                  <span class="ch-body">
+                    <strong>Showcase &amp; Wrist Detail</strong>
+                    <small>Articulated RH56 fingers &amp; watch fit</small>
+                  </span>
+                  <span class="ch-play" aria-hidden="true">▶</span>
+                </button>
+                <button type="button" class="reel-chapter" data-seek="26" data-end="30">
+                  <span class="ch-time">0:26</span>
+                  <span class="ch-body">
+                    <strong>Red Carpet Walk</strong>
+                    <small>Glowing cyan eyes under the lights</small>
+                  </span>
+                  <span class="ch-play" aria-hidden="true">▶</span>
+                </button>
+              </div>
+
+              <div class="reel-actions">
+                <a href="./luka-sim.html" class="btn btn-primary" data-track-link="Talk & Mirror Studio (Reel)">
+                  Try Talk &amp; Mirror Studio <span class="arrow" aria-hidden="true">→</span>
+                </a>
+                <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn" data-track-link="vaultbots.com">
+                  Own Luka at VaultBots <span class="arrow" aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 02: INTERACTIVE STUDIOS FOR ACTIVE BOT -->
       <section class="section-band apps-section" id="studios">
         <span class="corner-mark tl" aria-hidden="true"></span>
         <span class="corner-mark tr" aria-hidden="true"></span>
         <div class="wrap">
           <div class="section-head">
             <div>
-              <span class="section-index">01 · LUKA v. A2U · WORKS IN ANY BROWSER</span>
+              <span class="section-index">02 · LUKA v. A2U · WORKS IN ANY BROWSER</span>
               <h2>Interactive Studios</h2>
             </div>
             <p class="section-note">Choose an experience below — no downloads, accounts, or physical robot required.</p>
@@ -295,14 +468,14 @@
         </div>
       </section>
 
-      <!-- SECTION 02: ROBOT FLEET & VAULTBOTS PURCHASE -->
+      <!-- SECTION 03: ROBOT FLEET & VAULTBOTS PURCHASE -->
       <section class="section-band apps-section" id="fleet">
         <span class="corner-mark tl" aria-hidden="true"></span>
         <span class="corner-mark tr" aria-hidden="true"></span>
         <div class="wrap">
           <div class="section-head">
             <div>
-              <span class="section-index">02 · ROBOT FLEET &amp; AVAILABILITY</span>
+              <span class="section-index">03 · ROBOT FLEET &amp; AVAILABILITY</span>
               <h2>Our Growing Lineup</h2>
             </div>
             <p class="section-note">New robots are joining the hub soon. Visit VaultBots to own Luka or reserve upcoming models.</p>
@@ -351,14 +524,14 @@
         </div>
       </section>
 
-      <!-- SECTION 03: STEADWELL VITA EDGE COMPANION HARDWARE -->
+      <!-- SECTION 04: STEADWELL VITA EDGE COMPANION HARDWARE -->
       <section class="section-band apps-section" id="vita">
         <span class="corner-mark tl" aria-hidden="true"></span>
         <span class="corner-mark tr" aria-hidden="true"></span>
         <div class="wrap">
           <div class="section-head">
             <div>
-              <span class="section-index">03 · OFFLINE-FIRST EDGE COMPANION</span>
+              <span class="section-index">04 · OFFLINE-FIRST EDGE COMPANION</span>
               <h2>Pair Luka with Steadwell VITA</h2>
             </div>
             <p class="section-note">
@@ -454,7 +627,7 @@
         </div>
       </section>
 
-      <!-- SECTION 04: ON-SITE ROBOT TOOLS (EXPANDED LOCALLY, COLLAPSED ON PUBLIC WEB) -->
+      <!-- SECTION 05: ON-SITE ROBOT TOOLS (EXPANDED LOCALLY, COLLAPSED ON PUBLIC WEB) -->
       <section class="section-band apps-section" id="operations">
         <span class="corner-mark tl" aria-hidden="true"></span>
         <span class="corner-mark tr" aria-hidden="true"></span>
@@ -462,7 +635,7 @@
           <details class="ops-drawer" id="opsDrawer" open>
             <summary>
               <div>
-                <span class="section-index">04 · ON-SITE OPERATOR CONSOLES</span>
+                <span class="section-index">05 · ON-SITE OPERATOR CONSOLES</span>
                 <h2>Local Robot Tools</h2>
               </div>
               <span class="drawer-pill" id="opsDrawerLabel">
@@ -627,6 +800,7 @@
           <a href="https://steadwell.solutions/products/vita-edge" target="_blank" rel="noopener" data-track-link="Steadwell VITA Edge">Steadwell VITA ↗</a>
         </div>
         <div class="footer-links">
+          <a href="#reel">Reel</a>
           <a href="#studios">Studios</a>
           <a href="#fleet">Fleet</a>
           <a href="#vita">VITA</a>

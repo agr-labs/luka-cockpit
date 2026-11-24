@@ -28,6 +28,7 @@ import {
   parseBinaryStlToYUp,
   buildPedestalMesh,
 } from '../src/upper-renderer.js';
+import { replyAsLukaHero, gestureToMood } from '../src/hero-chat.js';
 import {
   OneEuro,
   P,
@@ -802,4 +803,31 @@ test('privacy-first analytics sanitization, robotics aggregation, export, and /s
   } finally {
     await new Promise((r) => srv.close(r));
   }
+});
+
+test('hero interactive chat brain and video reel analytics validate cleanly', () => {
+  const hi = replyAsLukaHero('Hey Luka!');
+  assert.equal(hi.mood, 'happy');
+  assert.equal(hi.gesture, 'wave');
+  assert.match(hi.reply, /Luka/i);
+
+  const vita = replyAsLukaHero('Tell me about Steadwell VITA Edge');
+  assert.equal(vita.gesture, 'nod');
+  assert.match(vita.reply, /VITA/i);
+
+  const joke = replyAsLukaHero('Tell me a joke');
+  assert.equal(joke.mood, 'celebrate');
+
+  assert.equal(gestureToMood('shake_no'), 'shake');
+  assert.equal(gestureToMood('look_around'), 'scan');
+  assert.equal(gestureToMood('celebrate'), 'celebrate');
+
+  const reelBatch = sanitizeEventBatch({
+    events: [
+      { session_id: 's_reel', env: 'pages', app: 'hub', event: 'reel_interaction', category: 'media', label: 'unmute', value: 0 },
+      { session_id: 's_reel', env: 'pages', app: 'hub', event: 'speech_turn', category: 'speech', label: 'hero_voice', meta: { surface: 'hero_visor', gesture: 'wave' } },
+    ],
+  });
+  assert.equal(reelBatch.events.length, 2);
+  assert.equal(reelBatch.rejected, 0);
 });

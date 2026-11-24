@@ -8,6 +8,7 @@
 
 import { createMetricsClient } from './metrics.js';
 import { FLEET_BOTS, VAULTBOTS_URL } from './fleet.js';
+import { initHeroChat } from './hero-chat.js';
 
 document.documentElement.classList.add('js');
 
@@ -118,13 +119,12 @@ function initCardSpotlights() {
 
 /* -------- 4. Interactive Obsidian OLED Visor (Offscreen & Hidden Safe) */
 
-function initVisorAnimation() {
+function initVisorAnimation(heroChat = null) {
   const hero = document.getElementById('heroSection');
   const eyes = document.getElementById('oledEyes');
   if (!hero || !eyes) return;
 
-  // Pause CSS animations on hero whenever scrolled offscreen (MengTo optimize-web-animations)
-  let heroVisible = true;
+  // Pause RAF eye gaze loop whenever hero is scrolled offscreen or tab hidden
   let rafId = 0;
   let blinkTimer = 0;
 
@@ -133,24 +133,28 @@ function initVisorAnimation() {
   let curX = 0;
   let curY = 0;
 
+  const isHeroActive = () => !hero.classList.contains('is-offscreen') && !document.hidden && !prefersReducedMotion;
+
   const stopLoop = () => {
     if (rafId) {
       cancelAnimationFrame(rafId);
       rafId = 0;
     }
-    hero.dataset.animationActive = 'false';
   };
 
   const step = () => {
-    if (!heroVisible || document.hidden || prefersReducedMotion) {
+    if (!isHeroActive()) {
       stopLoop();
       return;
     }
-    curX += (targetX - curX) * 0.1;
-    curY += (targetY - curY) * 0.1;
+    const suspended = heroChat?.isGazeSuspended?.() ?? false;
+    const tx = suspended ? 0 : targetX;
+    const ty = suspended ? 0 : targetY;
+    curX += (tx - curX) * 0.12;
+    curY += (ty - curY) * 0.12;
     eyes.style.setProperty('--gaze-x', `${curX.toFixed(2)}px`);
     eyes.style.setProperty('--gaze-y', `${curY.toFixed(2)}px`);
-    if (Math.abs(targetX - curX) > 0.04 || Math.abs(targetY - curY) > 0.04) {
+    if (Math.abs(tx - curX) > 0.04 || Math.abs(ty - curY) > 0.04) {
       rafId = requestAnimationFrame(step);
     } else {
       rafId = 0;
@@ -158,14 +162,13 @@ function initVisorAnimation() {
   };
 
   const kickLoop = () => {
-    if (!rafId && heroVisible && !document.hidden && !prefersReducedMotion) {
-      hero.dataset.animationActive = 'true';
+    if (!rafId && isHeroActive()) {
       rafId = requestAnimationFrame(step);
     }
   };
 
   const onPointerMove = (e) => {
-    if (!heroVisible || prefersReducedMotion) return;
+    if (!isHeroActive()) return;
     const rect = hero.getBoundingClientRect();
     const nx = ((e.clientX - rect.left) / Math.max(rect.width, 1)) * 2 - 1;
     const ny = ((e.clientY - rect.top) / Math.max(rect.height, 1)) * 2 - 1;
@@ -187,7 +190,8 @@ function initVisorAnimation() {
     if (prefersReducedMotion) return;
     clearTimeout(blinkTimer);
     blinkTimer = window.setTimeout(() => {
-      if (heroVisible && !document.hidden) {
+      const suspended = heroChat?.isGazeSuspended?.() ?? false;
+      if (isHeroActive() && !suspended) {
         eyes.style.setProperty('--blink-scale', '0.12');
         window.setTimeout(() => {
           eyes.style.setProperty('--blink-scale', '1');
@@ -198,6 +202,13 @@ function initVisorAnimation() {
   };
   scheduleBlink();
 
+  return { recenter: () => { targetX = 0; targetY = 0; kickLoop(); } };
+}
+
+function initHeroVisibilityObserver() {
+  const hero = document.getElementById('heroSection');
+  if (!hero) return;
+  let heroVisible = true;
   if (typeof IntersectionObserver !== 'undefined') {
     const io = new IntersectionObserver(
       (entries) => {
@@ -205,7 +216,6 @@ function initVisorAnimation() {
           heroVisible = entry.isIntersecting;
           hero.classList.toggle('is-offscreen', !heroVisible);
           hero.dataset.animationActive = heroVisible && !prefersReducedMotion ? 'true' : 'false';
-          if (!heroVisible) stopLoop();
         }
       },
       { threshold: 0.05 },
@@ -216,12 +226,181 @@ function initVisorAnimation() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       hero.classList.add('is-offscreen');
-      stopLoop();
+      hero.dataset.animationActive = 'false';
     } else if (heroVisible) {
       hero.classList.remove('is-offscreen');
       hero.dataset.animationActive = prefersReducedMotion ? 'false' : 'true';
     }
   });
+}
+
+/* -------------------------- 4b. Live Hardware Video Reel Showcase */
+
+function initReelShowcase() {
+  const frame = document.getElementById('reelFrame');
+  const video = document.getElementById('lukaReelVideo');
+  const playBtn = document.getElementById('reelPlayBtn');
+  const muteBtn = document.getElementById('reelMuteBtn');
+  const soundCta = document.getElementById('reelSoundCta');
+  const fsBtn = document.getElementById('reelFsBtn');
+  const scrub = document.getElementById('reelScrub');
+  const progressFill = document.getElementById('reelProgressFill');
+  const timeEl = document.getElementById('reelTime');
+  const chapters = Array.from(document.querySelectorAll('#reelChapters .reel-chapter'));
+
+  if (!frame || !video) return;
+
+  let userPaused = false;
+  let trackedFirstPlay = false;
+
+  const fmtTime = (sec) => {
+    const s = Math.max(0, Math.floor(Number.isFinite(sec) ? sec : 0));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${String(r).padStart(2, '0')}`;
+  };
+
+  const syncUi = () => {
+    const playing = !video.paused && !video.ended;
+    const muted = video.muted || video.volume === 0;
+    frame.dataset.playing = String(playing);
+    frame.dataset.muted = String(muted);
+    if (soundCta) soundCta.hidden = !muted;
+    const dur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 29.45;
+    const cur = video.currentTime || 0;
+    const pct = Math.max(0, Math.min(100, (cur / dur) * 100));
+    if (progressFill) progressFill.style.width = `${pct.toFixed(2)}%`;
+    if (scrub) scrub.setAttribute('aria-valuenow', String(Math.round(pct)));
+    if (timeEl) timeEl.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
+
+    // Highlight active chapter chip synced to playhead
+    for (const ch of chapters) {
+      const start = Number(ch.dataset.seek || 0);
+      const end = Number(ch.dataset.end || 999);
+      const active = cur >= start - 0.15 && cur < end;
+      ch.classList.toggle('is-active', active);
+    }
+  };
+
+  const safePlay = () => {
+    const p = video.play?.();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  };
+
+  const togglePlay = () => {
+    if (video.paused) {
+      userPaused = false;
+      safePlay();
+    } else {
+      userPaused = true;
+      video.pause();
+    }
+  };
+
+  const toggleMute = (forceUnmute = false) => {
+    video.muted = forceUnmute ? false : !video.muted;
+    if (!video.muted) {
+      video.volume = 1;
+      userPaused = false;
+      safePlay();
+      metrics.track('reel_interaction', { category: 'media', label: 'unmute' });
+    }
+    syncUi();
+  };
+
+  playBtn?.addEventListener('click', togglePlay);
+  video.addEventListener('click', togglePlay);
+  muteBtn?.addEventListener('click', () => toggleMute(false));
+  soundCta?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMute(true);
+  });
+
+  fsBtn?.addEventListener('click', () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    } else if (video.requestFullscreen) {
+      video.requestFullscreen().catch(() => {});
+    } else if (typeof video.webkitEnterFullscreen === 'function') {
+      video.webkitEnterFullscreen();
+    }
+    metrics.track('reel_interaction', { category: 'media', label: 'fullscreen' });
+  });
+
+  // Scrubbing via pointer drag or click
+  if (scrub) {
+    let dragging = false;
+    const seekFromClientX = (clientX) => {
+      const rect = scrub.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(rect.width, 1)));
+      const dur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 29.45;
+      video.currentTime = frac * dur;
+      syncUi();
+    };
+    scrub.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      try { scrub.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      seekFromClientX(e.clientX);
+    });
+    scrub.addEventListener('pointermove', (e) => {
+      if (dragging) seekFromClientX(e.clientX);
+    });
+    scrub.addEventListener('pointerup', () => { dragging = false; });
+    scrub.addEventListener('pointercancel', () => { dragging = false; });
+    scrub.addEventListener('keydown', (e) => {
+      const dur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 29.45;
+      if (e.key === 'ArrowRight') { video.currentTime = Math.min(dur, video.currentTime + 2); syncUi(); }
+      if (e.key === 'ArrowLeft') { video.currentTime = Math.max(0, video.currentTime - 2); syncUi(); }
+    });
+  }
+
+  // Interactive chapter jumper pills
+  for (const ch of chapters) {
+    ch.addEventListener('click', () => {
+      const target = Number(ch.dataset.seek || 0);
+      video.currentTime = target;
+      userPaused = false;
+      safePlay();
+      syncUi();
+      const title = ch.querySelector('strong')?.textContent?.trim() || `t_${target}`;
+      metrics.track('reel_interaction', { category: 'media', label: `chapter:${title}`, value: target });
+    });
+  }
+
+  video.addEventListener('play', () => {
+    if (!trackedFirstPlay) {
+      trackedFirstPlay = true;
+      metrics.track('reel_interaction', { category: 'media', label: 'play' });
+    }
+    syncUi();
+  });
+  video.addEventListener('pause', syncUi);
+  video.addEventListener('timeupdate', syncUi);
+  video.addEventListener('loadedmetadata', syncUi);
+  video.addEventListener('volumechange', syncUi);
+
+  // Smooth muted viewport autoplay + automatic offscreen pause
+  if (!prefersReducedMotion && typeof IntersectionObserver !== 'undefined') {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && !userPaused && !document.hidden) {
+            safePlay();
+          } else if (!entry.isIntersecting && !video.paused) {
+            video.pause();
+          }
+        }
+      },
+      { threshold: 0.35 },
+    );
+    io.observe(frame);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !video.paused) video.pause();
+  });
+
+  syncUi();
 }
 
 /* --------------------- 5. Dynamic Service URLs & Passive Live Status */
@@ -474,7 +653,17 @@ initNavigationAndFleet();
 initWordReveals();
 initCardReveals();
 initCardSpotlights();
-initVisorAnimation();
+let visorCtrl = null;
+const heroChat = initHeroChat({
+  metrics,
+  isStaticBuild,
+  onPhaseChange: (phase) => {
+    if (phase === 'thinking' || phase === 'speaking') visorCtrl?.recenter();
+  },
+});
+visorCtrl = initVisorAnimation(heroChat);
+initHeroVisibilityObserver();
+initReelShowcase();
 const origins = resolveServiceUrls();
 void syncServiceHealth(origins);
 initKeyboardShortcuts();

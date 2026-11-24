@@ -32,6 +32,7 @@ const DIRS = [
   'src',
   'config',
   'docs',
+  'media',
   'model/generated',
   'model/recordings',
 ];
@@ -87,6 +88,9 @@ async function main() {
     '  Cache-Control: public, max-age=86400',
     '',
     '/model/recordings/*',
+    '  Cache-Control: public, max-age=86400',
+    '',
+    '/media/*',
     '  Cache-Control: public, max-age=86400',
     '',
     '/*.html',
