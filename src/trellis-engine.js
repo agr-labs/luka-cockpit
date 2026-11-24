@@ -9,6 +9,8 @@
 //   - TIC-1 Context Fingerprinting & Hot/Warm/Cool/Cold tier telemetry
 //   - Emergent Capability Service (composition discovery + Teach-by-Pose embodied skills)
 
+import { STEADWELL_TRELLIS_SEED_ENTITIES } from './steadwell-knowledge.js';
+
 const STORAGE_KEY = 'luka_trellis_sovereign_v1';
 
 /* ----------------------------------------------------- Deterministic Hash */
@@ -69,14 +71,15 @@ const SEED_ENTITIES = [
     id: 'ent-steadwell',
     name: 'Steadwell',
     type: 'organization',
-    roleOrField: 'Local-First Embodied AI & Trellis Lab',
-    location: 'AGR Labs',
-    notes: ['Sovereign local memory, CoRa, Trellis TRP-1, and AgiBot A2 commissioning'],
-    edgeLabels: { Luka: 'hosts', Trellis: 'develops' },
+    roleOrField: 'Private Local-First Intelligence & Open Robotics',
+    location: 'steadwell.solutions',
+    notes: ['Hardware (VITA, Foundry, TH-01) · Keystone · Trellis · CoRa · SIF · Steadwell Mesh · QUACK'],
+    edgeLabels: { Luka: 'hosts', Trellis: 'develops', 'VITA Edge': 'ships', 'VITA Studio': 'ships', 'Foundry GX1': 'ships' },
     openLoops: [],
     trustState: 'verified',
     updatedAt: Date.now(),
   },
+  ...STEADWELL_TRELLIS_SEED_ENTITIES.map((e) => ({ ...e, updatedAt: Date.now() })),
 ];
 
 const SEED_SKILLS = [
@@ -343,7 +346,21 @@ export class TrellisEngine {
 
     this._loadLocal();
     if (!this.commits.length) this._seedGenesis();
+    this._ensureSteadwellSeeds();
     this._rebuildIndex();
+  }
+
+  _ensureSteadwellSeeds() {
+    const existingIds = new Set(this.entities.map((e) => e.id));
+    const existingNames = new Set(this.entities.map((e) => String(e.name || '').toLowerCase()));
+    let added = false;
+    for (const seed of STEADWELL_TRELLIS_SEED_ENTITIES) {
+      if (!existingIds.has(seed.id) && !existingNames.has(seed.name.toLowerCase())) {
+        this.entities.push({ ...JSON.parse(JSON.stringify(seed)), updatedAt: Date.now() });
+        added = true;
+      }
+    }
+    if (added) this._persistLocal();
   }
 
   subscribe(fn) {
@@ -405,6 +422,7 @@ export class TrellisEngine {
         this.candidates = data.candidates || [];
         this.experiences = data.experiences || [];
         if (data.workingState) this.workingState = { ...this.workingState, ...data.workingState };
+        this._ensureSteadwellSeeds();
         this._rebuildIndex();
         this._persistLocal();
         this._emit();

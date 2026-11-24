@@ -26,6 +26,7 @@ import {
   validateHardwareCommandPacket,
 } from './hw-safety.js';
 import { TrellisEngine } from './trellis-engine.js';
+import { answerSteadwellQuestion } from './steadwell-knowledge.js';
 import { createMetricsClient } from './metrics.js';
 import { clamp, damp, DEG, m4 } from './mathx.js';
 
@@ -565,10 +566,13 @@ async function runConversationTurn({ text = null, wavBlob = null, inputMode = nu
     }
     if (!rData) {
       const low = spokenText.toLowerCase();
-      let g = matchedSkill?.gesture || 'explain';
-      let replyText = 'Got it — running right here in browser sim mode with hardware safety limits active.';
+      const steadwellHit = answerSteadwellQuestion(spokenText);
+      let g = matchedSkill?.gesture || steadwellHit?.gesture || 'explain';
+      let replyText = steadwellHit?.reply || 'Got it — running right here in browser sim mode with hardware safety limits active.';
       if (matchedSkill) {
         replyText = `Running ${matchedSkill.name.replace(/_/g, ' ')} now.`;
+      } else if (steadwellHit) {
+        // Authoritative Steadwell hardware / stack answer already set above
       } else if (/\b(hi|hello|hey|wave|greet)\b/.test(low)) {
         g = 'wave';
         replyText = 'Hey! Great to see you — waving right now within my A2U actuator limits.';

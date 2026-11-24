@@ -5,6 +5,8 @@
 //   - Public static web (isStaticBuild): Browser SpeechRecognition -> Luka Hero Brain -> Web Speech TTS + animated visor.
 //   - Drives expressive OLED eye states (happy crescents, curious glance, nod, shake, scan, audio-reactive bars).
 
+import { answerSteadwellQuestion } from './steadwell-knowledge.js';
+
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 const FALLBACK_BANTER = [
@@ -57,6 +59,16 @@ export function gestureToMood(gesture = '') {
 
 export function replyAsLukaHero(inputText) {
   const low = String(inputText || '').trim().toLowerCase();
+
+  // Check authoritative Steadwell hardware & stack knowledge first for specific product/stack queries
+  const steadwellHit = answerSteadwellQuestion(inputText);
+  if (steadwellHit) {
+    return {
+      reply: steadwellHit.reply,
+      gesture: steadwellHit.gesture,
+      mood: steadwellHit.mood || gestureToMood(steadwellHit.gesture),
+    };
+  }
 
   if (/\b(hi|hello|hey|yo|howdy|good morning|good afternoon|good evening|what'?s up|sup)\b/.test(low)) {
     return {

@@ -18,6 +18,7 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 import { sanitizeEventBatch, aggregateMetrics, eventsToCsv, eventsToJsonl } from './metrics-agg.mjs';
+import { STEADWELL_CORA_BRIEF, retrieveSteadwellContext, answerSteadwellQuestion } from './steadwell-knowledge.js';
 
 const execFileP = promisify(execFile);
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -184,7 +185,7 @@ async function transcribeWav(wavBuffer) {
         '-of', stem,
         '-oj', '-np', '-nt',
         '-l', 'en',
-        '--prompt', 'Luka, AgiBot, Steadwell, Kameyoko, Trellis.',
+        '--prompt', 'Luka, AgiBot, Steadwell, VITA Edge, VITA Studio, Foundry, CoRa, Keystone, Trellis, Kameyoko, VaultBots, QUACK.',
         '-t', String(Math.min(8, os.cpus().length || 4)),
       ],
       { timeout: 60_000, maxBuffer: 4 * 1024 * 1024 },
@@ -224,22 +225,32 @@ const BUILTIN_GESTURES = [
   'inspect', 'welcome', 'guard', 'celebrate', 'open_hands', 'listen', 'rest',
 ];
 
-function buildEmbodiedSystemPrompt({ trellisContext, activeSkills, trackingSummary }) {
+function buildEmbodiedSystemPrompt({ userText = '', trellisContext, activeSkills, trackingSummary }) {
   const skillNames = (activeSkills || [])
     .map((s) => (typeof s === 'string' ? s : `${s.name}: ${s.description || ''}`))
     .slice(0, 12);
 
+  const matchedCatalog = retrieveSteadwellContext(userText, 3);
+
   const lines = [
-    'You are Luka, an AgiBot A2 Ultra humanoid robot speaking out loud in your interactive upper-body digital twin studio at Steadwell / AGR Labs.',
-    'You have a glossy black sensor head with an interactive OLED visor, a pearl-white and gunmetal upper torso, two 7-DOF arms, and articulated Inspire RH56 dexterous hands.',
-    'Respond warmly, clearly, and naturally in 1 to 3 concise spoken sentences (under 55 words). Never use markdown, bullet lists, asterisks, or emoji because your words are spoken aloud.',
+    'You are Luka (v. A2U), an AgiBot A2 Ultra humanoid robot powered by Steadwell CoRa and Trellis, speaking out loud in the Steadwell Robotics Hub and Talk & Mirror Studio.',
+    'You have a glossy black obsidian sensor head with a cyan interactive OLED visor, a pearl-white and gunmetal chassis, two 7-DOF arms, and articulated Inspire RH56 dexterous hands.',
+    'Respond warmly, clearly, and naturally in 1 to 3 concise spoken sentences (under 65 words). Never use markdown, bullet lists, asterisks, or emoji because your words are spoken aloud.',
     'At the very start of your reply, emit ONE embodied control tag on the same line, then a space, then your spoken reply:',
     `  [GESTURE:<name>] where <name> is one of: ${BUILTIN_GESTURES.join(', ')}`,
     'Or if an emergent/taught embodied skill matches what the user asks, emit: [SKILL:<skill_name>]',
     'Example: [GESTURE:wave] Hey there, great to see you. My arms and neck are online and ready whenever you want to test a motion.',
-    'Ground your answers in the Trellis Memory Context below when recalling people, projects, commitments, or past observations. If something is not in memory, say so honestly instead of inventing it.',
+    'Use the Steadwell Hardware & Stack Knowledge below confidently and accurately whenever asked about Steadwell VITA, Foundry, Compute Dock, CoRa TH-01, Starter Solution, Sight, Pocket, Sound, QUACK, Keystone, Trellis, Mesh, Commons, or VaultBots.',
+    'Use the Trellis Memory Context below when recalling specific people, personal projects, or past conversation commitments. Only say you do not know if a topic is absent from both your Steadwell knowledge and Trellis memory.',
+    `\n[STEADWELL SOLUTIONS HARDWARE & STACK KNOWLEDGE]\n${STEADWELL_CORA_BRIEF}`,
   ];
 
+  if (matchedCatalog.length) {
+    lines.push(
+      '\n[MATCHED STEADWELL PRODUCT SPECS FOR THIS QUESTION]\n'
+      + matchedCatalog.map((p) => `- ${p.name} (${p.price}, ${p.url}): ${p.summary}`).join('\n'),
+    );
+  }
   if (skillNames.length) {
     lines.push('\n[ACTIVE EMBODIED & EMERGENT SKILLS]\n' + skillNames.map((s) => `- ${s}`).join('\n'));
   }
@@ -318,6 +329,17 @@ function localEmbodiedFallback(userText, { activeSkills = [], trellisSummary = '
         model: 'embodied-router',
       };
     }
+  }
+
+  const steadwellAnswer = answerSteadwellQuestion(userText);
+  if (steadwellAnswer) {
+    return {
+      reply: steadwellAnswer.reply,
+      gesture: steadwellAnswer.gesture || 'explain',
+      invokedSkill: null,
+      llm: 'local-fallback',
+      model: 'cora-steadwell-kb',
+    };
   }
 
   if (/\b(hello|hi|hey|what'?s up|good morning|good afternoon)\b/.test(lower)) {
@@ -439,7 +461,7 @@ async function callOpenAiCompatible(cfg, messages) {
 
 async function runReasoning({ text, history = [], llm, trellisContext = '', trellisSummary = '', activeSkills = [], trackingSummary = '' }) {
   const started = performance.now();
-  const sys = buildEmbodiedSystemPrompt({ trellisContext, activeSkills, trackingSummary });
+  const sys = buildEmbodiedSystemPrompt({ userText: text, trellisContext, activeSkills, trackingSummary });
   const messages = [{ role: 'system', content: sys }];
   for (const turn of history.slice(-8)) {
     if (['user', 'assistant'].includes(turn?.role) && typeof turn.content === 'string' && turn.content.trim()) {

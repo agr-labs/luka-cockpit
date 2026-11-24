@@ -47,8 +47,14 @@ import {
 import {
   handleSimApi,
   parseEmbodiedDirective,
+  buildEmbodiedSystemPrompt,
   localEmbodiedFallback,
 } from '../src/sim-api.mjs';
+import {
+  STEADWELL_CORA_BRIEF,
+  retrieveSteadwellContext,
+  answerSteadwellQuestion,
+} from '../src/steadwell-knowledge.js';
 import {
   sanitizeEventBatch,
   aggregateMetrics,
@@ -830,4 +836,44 @@ test('hero interactive chat brain and video reel analytics validate cleanly', ()
   });
   assert.equal(reelBatch.events.length, 2);
   assert.equal(reelBatch.rejected, 0);
+});
+
+test('CoRa Steadwell hardware & stack knowledge grounds prompts, retrieval, fallbacks, and Trellis seeds', () => {
+  assert.match(STEADWELL_CORA_BRIEF, /VITA Edge \(\$2,499/);
+  assert.match(STEADWELL_CORA_BRIEF, /VITA Studio \(\$4,199/);
+  assert.match(STEADWELL_CORA_BRIEF, /Foundry GX1 \(\$4,299/);
+  assert.match(STEADWELL_CORA_BRIEF, /CoRa TH-01/);
+  assert.match(STEADWELL_CORA_BRIEF, /QUACK/);
+
+  // Targeted product retrieval
+  const dockHits = retrieveSteadwellContext('Can I hook up an RTX 5090 with a Compute Dock?');
+  assert.equal(dockHits[0]?.id, 'vita-compute-dock');
+
+  const foundryHits = retrieveSteadwellContext('Tell me about Foundry GX2 clusters');
+  assert.equal(foundryHits[0]?.id, 'foundry');
+
+  // CoRa system prompt injects both the core brief and matched product specs
+  const sysPrompt = buildEmbodiedSystemPrompt({ userText: 'Tell me about pairing you with Steadwell VITA' });
+  assert.match(sysPrompt, /\[STEADWELL SOLUTIONS HARDWARE & STACK KNOWLEDGE\]/);
+  assert.match(sysPrompt, /\[MATCHED STEADWELL PRODUCT SPECS FOR THIS QUESTION\]/);
+  assert.match(sysPrompt, /MINISFORUM MS-03-S386H/);
+  assert.match(sysPrompt, /GMKtec EVO-X3/);
+
+  // Direct spoken answers cover comparisons, docks, terminals, and local fallback
+  const compare = answerSteadwellQuestion('Compare VITA Edge vs VITA Studio');
+  assert.ok(compare && /2,499/.test(compare.reply) && /4,199/.test(compare.reply));
+
+  const th01 = answerSteadwellQuestion('What is the CoRa TH-01?');
+  assert.ok(th01 && /499/.test(th01.reply) && /12\.1/.test(th01.reply));
+
+  const fb = localEmbodiedFallback('Tell me about pairing you with Steadwell VITA');
+  assert.equal(fb.model, 'cora-steadwell-kb');
+  assert.match(fb.reply, /VITA Edge/);
+
+  // Trellis engine seeds Steadwell hardware & stack entities
+  const trellis = new TrellisEngine();
+  const names = new Set(trellis.entities.map((e) => e.name));
+  for (const required of ['VITA Edge', 'VITA Studio', 'Foundry GX1', 'CoRa TH-01', 'Keystone', 'VaultBots']) {
+    assert.ok(names.has(required), `Trellis seed graph contains ${required}`);
+  }
 });
