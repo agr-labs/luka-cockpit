@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1116">
+  <title>LukaChat</title>
+  <link rel="stylesheet" href="/head-controls.css">
+  <link rel="stylesheet" href="/lukachat.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <a class="wordmark" href="/chat" aria-label="LukaChat home"><span class="brand-mark" aria-hidden="true">L</span>Luka<span>Chat</span></a>
+    <span class="connection" id="connection">Connecting…</span>
+    <div class="header-actions"><button id="settingsToggle" type="button" aria-expanded="false" aria-controls="settingsPanel">Menu</button></div>
+  </header>
+  <main class="workspace">
+    <section class="conversation" aria-label="Conversation with Luka">
+      <div class="conversation-top"><span class="eyebrow">WITH LUKA</span><span id="turnCount" class="subtle">New conversation</span></div>
+      <div class="question" id="questionCard" hidden><span class="speaker-label">YOU</span><button id="questionText" type="button" title="Read your full message"></button></div>
+      <div class="reply-heading"><span class="speaker-label" id="readerLabel">LUKA</span></div>
+      <div id="replyText" class="reply-text" tabindex="0">I’m here. Hold the button below and tell me what’s on your mind.</div>
+      <div class="reader-nav"><button id="speakAgain" type="button" hidden>Speak again</button><button id="previousPage" type="button" aria-label="Previous part" disabled>←</button><span id="pageCount" class="subtle"></span><button id="nextPage" type="button" aria-label="Next part" disabled>→</button><button id="showReply" type="button" hidden>Back to Luka</button></div>
+      <div class="conversation-bottom"><span class="state-dot" id="stateDot" data-state="idle"></span><span id="status" role="status" aria-live="polite">Checking the conversation bridge…</span><span id="timing" class="subtle"></span></div>
+    </section>
+  </main>
+  <footer class="talk-footer">
+    <div class="talk-center">
+      <button id="talk" class="talk-button" type="button" disabled aria-label="Hold to talk to Luka"><span class="mic-symbol" aria-hidden="true">●</span><span id="talkLabel">Hold to talk</span><span id="holdTime"></span></button>
+      <div class="talk-hint"><span id="micSource">Your device microphone</span><span id="shortcut">Hold Space, or press and hold</span><span id="micLevel" aria-hidden="true"><i></i></span></div>
+    </div>
+    <button id="cancel" class="secondary-action" type="button" hidden disabled>Cancel</button>
+  </footer>
+</div>
+<section class="overlay-panel" id="settingsPanel" hidden aria-label="Conversation settings">
+  <div class="panel-title"><h2>LukaChat menu</h2><button type="button" data-close="settingsPanel" aria-label="Close menu">×</button></div>
+  <div class="menu-tools"><button id="headToggle" type="button" aria-expanded="false" aria-controls="headPanel">Head movement</button><button id="typeToggle" type="button" aria-controls="textPanel" aria-expanded="false">Type a message</button><button id="controllerToggle" type="button" aria-controls="controllerPanel" aria-expanded="false">Controller setup</button></div>
+  <label for="model">Reasoning</label><select id="model"></select>
+  <p id="modelDetail" class="subtle"></p>
+  <span id="modelUsed" class="subtle"></span>
+  <div class="voice-summary"><div class="setting-row"><span>Luka’s voice</span><strong id="voiceProfile">Loading saved voice…</strong></div><button id="voiceToggle" type="button" aria-expanded="false" aria-controls="voicePanel">Change voice</button></div>
+  <label class="rocker-setting" for="headRockerEnabled">
+    <span><strong id="headRockerLabel">Controller stick · Luka’s head</strong><small id="headRockerStatus">Off · enable after checking the controller mapping.</small></span>
+    <input id="headRockerEnabled" class="rocker-switch" type="checkbox" role="switch" aria-label="Enable controller head control" disabled>
+  </label>
+  <label class="rocker-setting" for="faceFollowEnabled">
+    <span><strong>Look toward visible faces</strong><small id="faceFollowStatus">Off · local face detection only; no identity or image storage. Camera alignment still needs calibration.</small></span>
+    <input id="faceFollowEnabled" class="rocker-switch" type="checkbox" role="switch" aria-label="Enable face following">
+  </label>
+  <a href="/">Open voice test dashboard ↗</a>
+</section>
+<section class="overlay-panel controller-panel" id="controllerPanel" hidden aria-label="Controller setup">
+  <div class="panel-title"><h2 id="controllerTitle">Controller setup</h2><button type="button" data-close="controllerPanel" aria-label="Close controller setup">×</button></div>
+  <small id="controllerIdentity" class="subtle">Press a controller button to connect it to this page.</small>
+  <div class="controller-tabs"><button id="controllerButtonsTab" type="button" aria-pressed="true">Buttons</button><button id="controllerStickTab" type="button" aria-pressed="false">Head stick</button></div>
+  <div id="controllerButtonsView" class="controller-buttons-view">
+    <dl id="controllerBindings" class="controller-bindings"></dl>
+    <div class="controller-assign">
+      <label for="controllerAction">Change a control</label><select id="controllerAction"></select>
+      <div class="controller-actions"><button id="controllerLearnButton" type="button">Assign button</button><button id="controllerClearButton" type="button">Clear</button><button id="controllerReset" type="button">Reset</button></div>
+    </div>
+  </div>
+  <div id="controllerStickView" class="controller-stick-view" hidden>
+    <button id="controllerCalibrate" type="button">Calibrate right stick</button>
+    <label class="controller-option"><input id="controllerHoldRequired" type="checkbox">Hold head button to steer</label>
+    <label for="controllerDeadzone">Stick dead zone <output id="controllerDeadzoneValue">32%</output></label>
+    <input id="controllerDeadzone" type="range" min="0.18" max="0.6" step="0.02" value="0.32">
+    <div class="controller-inverts"><label class="controller-option"><input id="controllerInvertX" type="checkbox">Invert pan</label><label class="controller-option"><input id="controllerInvertY" type="checkbox">Invert tilt</label></div>
+    <small id="controllerAxes" class="subtle">Stick not configured.</small>
+  </div>
+  <small id="controllerSetupStatus" class="subtle" role="status" aria-live="polite">Controller commands pause while this panel is open.</small>
+  <small id="controllerLive" class="subtle">Waiting for controller input…</small>
+</section>
+<section class="overlay-panel" id="voicePanel" hidden aria-label="Choose Luka’s voice">
+  <div class="panel-title"><h2>Luka’s voice</h2><button type="button" data-close="voicePanel" aria-label="Close voice picker">×</button></div>
+  <label for="voiceChoice">Choose a voice</label>
+  <select id="voiceChoice" disabled><option>Loading voices…</option></select>
+  <small id="voiceDescription" class="subtle"></small>
+  <div class="voice-actions"><button id="voicePreview" type="button" disabled>Preview on Luka</button><button id="voiceApply" type="button" disabled>Use this voice</button></div>
+  <small id="voiceStatus" class="subtle" role="status" aria-live="polite">Loading voice options…</small>
+</section>
+<section class="overlay-panel head-panel" id="headPanel" hidden aria-label="Head movement">
+  <div class="panel-title"><h2>Head controls</h2><button type="button" id="headClose" aria-label="Close head controls">×</button></div>
+  <div id="headMount"></div>
+</section>
+<section class="overlay-panel text-panel" id="textPanel" hidden aria-label="Type a message">
+  <div class="panel-title"><h2>Talk by typing</h2><button type="button" data-close="textPanel" aria-label="Close typing">×</button></div>
+  <form id="textForm"><label for="textInput">Your message</label><textarea id="textInput" rows="3" maxlength="4000" placeholder="Ask Luka something…"></textarea><button type="submit" id="sendText">Send to Luka</button></form>
+</section>
+<script type="module" src="/lukachat.js"></script>
+<script type="module" src="/head-controls.js"></script>
+</body>
+</html>

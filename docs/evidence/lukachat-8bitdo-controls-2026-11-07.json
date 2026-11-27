@@ -1,0 +1,51 @@
+{
+  "date": "2026-11-07",
+  "controller_os_observation": {
+    "name": "8BitDo Ultimate 2C Wireless",
+    "transport": "Bluetooth Low Energy",
+    "vendor_id": "2dc8",
+    "product_id": "301b"
+  },
+  "physical_browser_mapping_confirmed": false,
+  "unit_checks": {
+    "command": "npm run test:controller",
+    "passed": 9,
+    "failed": 0
+  },
+  "browser_checks": {
+    "inputs": "Simulated Gamepad API in an isolated browser session",
+    "head_api": "Intercepted locally; no robot commands",
+    "microphone": "Stubbed; no real capture",
+    "default_talk_button": "LT (6) for standard 8BitDo layouts",
+    "default_head_hold": "RB (5)",
+    "learned_talk_button": "RT (7)",
+    "calibrated_axes": [4, 5],
+    "saved_profile_survives_reload": true,
+    "setup_suppresses_microphone_and_head_actions": true,
+    "held_trigger_on_connection_is_suppressed": true,
+    "focus_return_requires_trigger_release": true,
+    "focus_loss_cancels_calibration": true,
+    "stick_without_guard_produces_no_jogs": true,
+    "deflected_stick_requires_neutral_before_guarded_movement": true,
+    "guarded_jog_directions": ["right", "right"],
+    "guard_release_stops_additional_jogs": true,
+    "menu_suppresses_movement": true,
+    "disconnect_releases_head_lease": true,
+    "raw_layout_requires_setup": true,
+    "speech_playback_requests": 0,
+    "page_errors": 0
+  },
+  "layouts": [
+    { "viewport": [390, 844], "controller_panel_bottom": 563.5, "menu_bottom": 617.1875, "page_overflow": false },
+    { "viewport": [844, 390], "controller_panel_bottom": 299.5, "menu_bottom": 287, "page_overflow": false }
+  ],
+  "robot_connection": {
+    "address": "192.168.80.22",
+    "aimdk_ports": [56322, 59001],
+    "ssh_host_key_matches_previous_jump": true,
+    "ssh_authorization": "Existing Mac identities rejected",
+    "observed_action": "McAction_RL_LOCOMOTION_DEFAULT",
+    "motion_mode_changed": false,
+    "live_head_or_voice_test_performed": false
+  }
+}

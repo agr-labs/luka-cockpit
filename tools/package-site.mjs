@@ -16,13 +16,23 @@ const DIST = join(ROOT, 'dist');
 
 const FILES = [
   'index.html',
+  'landing.css',
+  'analytics.html',
+  'cockpit.html',
   'styles.css',
+  'luka-sim.html',
+  'luka-sim.css',
+  'favicon.svg',
+  'og-luka.png',
+  'robots.txt',
+  'sitemap.xml',
   'README.md',
 ];
 const DIRS = [
   'src',
   'config',
   'docs',
+  'media',
   'model/generated',
   'model/recordings',
 ];
@@ -31,6 +41,7 @@ const MODEL_DOCS = [
   'model/BUILD_REPORT.md',
   'model/LICENSE-MulanPSL2',
   'model/measurements.csv',
+  'model/meshes/logo.stl',
 ];
 
 const PAGES_MAX_BYTES = 25 * 1024 * 1024;
@@ -51,15 +62,17 @@ async function main() {
 
   for (const f of FILES) await cp(join(ROOT, f), join(DIST, f));
 
-  // Stamp the build so the page knows it is static without probing (a failed
-  // /api/health probe would log a 404 in every visitor's console).
-  const indexPath = join(DIST, 'index.html');
-  const html = await readFile(indexPath, 'utf8');
-  await writeFile(
-    indexPath,
-    html.replace('<meta charset="utf-8" />',
-      '<meta charset="utf-8" />\n<meta name="luka-env" content="static" />'),
-  );
+  // Stamp the build so pages know they are static without probing (a failed
+  // /api/health or /sim-api/health probe would log a 404 in every visitor's console).
+  for (const name of ['index.html', 'analytics.html', 'cockpit.html', 'luka-sim.html']) {
+    const htmlPath = join(DIST, name);
+    const html = await readFile(htmlPath, 'utf8');
+    await writeFile(
+      htmlPath,
+      html.replace('<meta charset="utf-8" />',
+        '<meta charset="utf-8" />\n  <meta name="luka-env" content="static" />'),
+    );
+  }
   for (const d of DIRS) await cp(join(ROOT, d), join(DIST, d), { recursive: true });
   for (const f of MODEL_DOCS) {
     try { await cp(join(ROOT, f), join(DIST, f)); } catch { /* optional */ }
@@ -75,6 +88,9 @@ async function main() {
     '  Cache-Control: public, max-age=86400',
     '',
     '/model/recordings/*',
+    '  Cache-Control: public, max-age=86400',
+    '',
+    '/media/*',
     '  Cache-Control: public, max-age=86400',
     '',
     '/*.html',

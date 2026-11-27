@@ -357,14 +357,33 @@ added from vendor frames and limits. The robot's zero is not the model's zero, t
 being offset by a reference captured for the arms, and a global `flip2` convention was chosen by
 a geometric heuristic. The result was a plausible pose that did not track the robot.
 
-**Decision.** Store per-joint `{offset, sign}` calibration in a shared file
+**Decision.** Store per-joint `{offset, sign, gain}` calibration in a shared file
 (`config/joint-calibration.json`). Legs default to absolute (offset 0) because their kinematics
 are vendor-authoritative. Arms and head default to the captured hanging pose as neutral. Signs
 start at +1 and are flipped per joint when motion runs backwards. A local calibration overrides
 the shared file only when it is newer, and the old convention/reference controls are disabled
 while a calibration is active.
 
-**Consequence.** The twin's static pose is exact to the captured configuration and its offsets
-are reproducible across browsers and devices. Direction is exact only after a human sign pass;
+**Consequence.** The twin's static pose is exact to the captured configuration, and gain trims
+the scale error that made shoulders/elbows travel too far on some gestures. Offsets are
+reproducible across browsers and devices. Direction is exact only after a human sign pass;
 the table makes that a 28-row, one-click operation rather than a code change. The parallel wrists
 remain the weakest part until a vendor arm description exists.
+
+---
+
+## D25 — A real hand, mounted as an admitted approximation
+
+**Context.** Luka's public model has no finger geometry. The hand reports six channels but the
+only 6-DoF hand description available is the MIT Inspire RH56DFX, whose envelope
+(82 × 159 × 101 mm) differs from Luka's welded hand (163 × 210 × 55 mm). Dropping it in unlabelled
+would trade one fiction (boxes) for another (a precise-looking wrong hand).
+
+**Decision.** Mount the RH56 with an explicit scale (1.32) and centre alignment, map the six
+channels to the six actuated joints, apply the URDF mimic couplings, and keep the whole thing
+behind a build flag (`HAND=0` restores the welded hand and boxes). Record the dimensional
+mismatch in `model/hand/PROVENANCE.md` and the calibration doc.
+
+**Consequence.** The twin now has articulated fingers on both hands, with real telemetry and
+visible individual joint motion. The shape is still an estimate; obtaining the AgiHand CAD is a
+separate, higher-fidelity task. The flag means the change is reversible in one build command.

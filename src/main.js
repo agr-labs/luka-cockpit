@@ -7,10 +7,13 @@ import { Playback, RECORDINGS, loadRecording } from './a2rec.js';
 import { detectEnvironment, describeEnvironment, MODES } from './env.js';
 import { buildFingers, curlFromHandValue, handValueForKey } from './fingers.js';
 import { ArmController, ARM_JOINTS, RATE_LIMITS, makeTransport } from './armcontrol.js';
+import { createMetricsClient } from './metrics.js';
 import { clamp, damp, DEG, m4 } from './mathx.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
+const metrics = createMetricsClient('cockpit');
+const bootStartedAt = performance.now();
 
 const safety = new SafetyController();
 const link = new RobotLink('');
@@ -66,6 +69,7 @@ const CHAIN = {
 function chainOf(n) {
   if (n === 'base_link') return 'body';
   if (n.startsWith('head_')) return 'head';
+  if (n.startsWith('lh_') || n.startsWith('rh_')) return 'hand';
   if (n.startsWith('left_hand') || n.startsWith('right_hand')) return 'hand';
   if (n.startsWith('left_wrist_') || n.startsWith('right_wrist_')) return n.includes('rod') ? 'aux' : 'hand';
   if (n.startsWith('left_arm')) return 'armL';
@@ -123,6 +127,19 @@ function applyEnv(env) {
   }
 }
 
+function startSimLink(robotId = 'luka-sim') {
+  // The simulator starts at its own zero, not Luka's hanging pose. Identity
+  // calibration keeps a 0.35 rad simulator joint a 0.35 rad model joint.
+  const joints = {};
+  for (const j of state.model.movable) joints[j.name] = { offset: 0, sign: 1, gain: 1 };
+  state.calibration = { version: 1, robot: robotId, capturedAt: new Date().toISOString(), pose: 'simulator identity calibration', joints };
+  link.startGateway(robotId);
+  const badge = $('envBadge');
+  if (badge) { badge.textContent = 'GATEWAY SIM'; badge.dataset.env = 'sim'; }
+  renderCalibration?.();
+  safety.note('Luka offline — mirroring the gateway simulator. This is not live robot data.', 'warn');
+}
+
 async function boot() {
   state.env = await detectEnvironment();
   applyEnv(state.env);
@@ -154,7 +171,7 @@ async function boot() {
   ]);
   // The vendor model has no finger geometry, so synthetic boxes are appended to the
   // mesh buffer. They are driven by hand telemetry and never sent anywhere.
-  const fingers = buildFingers();
+  const fingers = model.hand ? { defs: [], verts: new Float32Array(0), ranges: [] } : buildFingers();
   const statics = new Float32Array(meshBuf);
   const combined = new Float32Array(statics.length + fingers.verts.length);
   combined.set(statics, 0);
@@ -199,7 +216,15 @@ async function boot() {
   requestAnimationFrame(frame);
   window.__cockpit = { safety, link, state, renderer, model, STATE, Playback, arm: state.arm, transport: state.armTransport, env: state.env, captureCalibration, resetCalibration, calibration: () => state.calibration };
   showMeta();
+  metrics.track('sim_boot', {
+    category: 'perf',
+    label: renderer?.kind || 'unknown',
+    value: Math.round(performance.now() - bootStartedAt),
+    meta: { renderer: renderer?.kind || 'unknown', env: state.env?.mode || 'sim' },
+  });
   bootDone();
+  const simRobot = new URLSearchParams(location.search).get('robot');
+  if (simRobot) startSimLink(simRobot);
 }
 
 function fail(msg) {
@@ -252,6 +277,27 @@ function applyConvention(name, value, conv = state.convention) {
   return value;
 }
 
+function applyHandTelemetry() {
+  const map = state.model?.hand;
+  if (!map) return;
+  const hands = link.handsFresh && (link.mode === 'live' || link.mode === 'gateway') ? link.hands : null;
+  if (!hands) return;
+  for (const [channel, sides] of Object.entries(map.channels)) {
+    for (const side of ['left', 'right']) {
+      const def = sides[side];
+      if (!def) continue;
+      const raw = hands[side]?.[channel];
+      if (typeof raw !== 'number') continue;
+      const t = Math.max(0, Math.min(1, raw / 2000));
+      state.target[def.joint] = def.min + t * (def.max - def.min);
+    }
+  }
+  for (const [name, m] of Object.entries(map.mimic || {})) {
+    const base = state.target[m.joint];
+    if (typeof base === 'number') state.target[name] = m.multiplier * base + m.offset;
+  }
+}
+
 function frame(now) {
   const dt = Math.min(0.05, (now - state.lastFrameTs) / 1000) || 0.016;
   state.lastFrameTs = now;
@@ -260,9 +306,9 @@ function frame(now) {
   const model = state.model;
   if (model) {
     // Priority: measured joint telemetry > recording playback > operator input.
-    const live = link.jointsFresh && link.mode === 'live' ? link.joints : null;
-    if (live) {
-      const neck = link.neckFresh && link.mode === 'live' ? link.neck : null;
+    const live = link.jointsFresh && (link.mode === 'live' || link.mode === 'gateway') ? link.joints : null;
+    if (live && !state.freeze) {
+      const neck = link.neckFresh && (link.mode === 'live' || link.mode === 'gateway') ? link.neck : null;
       const cal = state.calibration?.joints;
       if (cal) {
         // Per-joint calibration supersedes the global convention heuristic.
@@ -290,6 +336,7 @@ function frame(now) {
           state.target[name] = applyConvention(name, rel);
         }
       }
+      applyHandTelemetry();
       state.poseSource = 'live';
     } else if (state.playback?.playing) {
       state.poseSource = 'playback';
@@ -359,7 +406,7 @@ function frame(now) {
 
     // Synthetic fingers: hand matrix × knuckle offset × curl about local X.
     if (state.fingers.length && state.colors) {
-      const hands = link.handsFresh && link.mode === 'live' ? link.hands : null;
+      const hands = link.handsFresh && (link.mode === 'live' || link.mode === 'gateway') ? link.hands : null;
       for (let i = 0; i < state.fingers.length; i++) {
         const f = state.fingers[i];
         const handMat = model.matrices.get(`${f.side}_hand`);
@@ -443,6 +490,7 @@ function buildJointUI() {
     details.appendChild(summary);
 
     for (const j of group.joints) {
+      if (j.name.startsWith('lh_') || j.name.startsWith('rh_')) continue;
       const row = document.createElement('label');
       row.className = 'jrow';
       const lo = j.lower === null ? -180 : j.lower / DEG;
@@ -504,6 +552,7 @@ async function ensureRecording(id) {
   if (state.playback && state.playbackIndex === idx) return state.playback;
   $('timeRead').textContent = 'loading…';
   const rec = await loadRecording(meta.file);
+  metrics.track('recording_play', { category: 'motion', label: meta.id || meta.file, value: Math.round(rec.duration || 0) });
   state.playback = new Playback(rec);
   state.playbackIndex = idx;
   // Only primary DOF matter here; the linkage joints are rigid by design.
@@ -597,11 +646,75 @@ function wireUI() {
     renderProfile();
   });
 
-  $('btnLink').addEventListener('click', () => {
+  $('btnLink').addEventListener('click', async () => {
     if (state.env && state.env.mode === MODES.SIM) return; // static build: nothing to connect to
-    if (link.mode === 'live') link.stop();
-    else { link.startLive(); $('banner').classList.remove('show'); }
+    if (link.mode === 'live' || link.mode === 'gateway') { link.stop(); return; }
+    // Preflight the gateway: if Luka is known offline, do not start the proxy
+    // poller (it only produces 504s). Go straight to the simulator instead.
+    let online = null;
+    try {
+      const gw = `${location.protocol}//${location.hostname}:8788/api/v1/robots/luka`;
+      const res = await fetch(gw, { signal: AbortSignal.timeout(1500) });
+      if (res.ok) online = (await res.json()).online;
+    } catch { /* gateway down: fall through to the direct path */ }
+    if (online === false) { startSimLink('luka-sim'); return; }
+    state.freeze = false;
+    link.startLive();
+    $('banner').classList.remove('show');
   });
+  const twistKey = (() => { try { return JSON.parse(localStorage.getItem(TWIST_KEY) || 'null') || {}; } catch { return {}; } })();
+  state.twist = { shoulder: Number(twistKey.shoulder) || 0, forearm: Number(twistKey.forearm) || 0 };
+  const bindTwist = (id, key) => {
+    const el = $(id), out = $(id + 'Out');
+    el.value = String(state.twist[key]);
+    out.textContent = `${state.twist[key]}°`;
+    el.addEventListener('input', () => {
+      state.twist[key] = Number(el.value);
+      out.textContent = `${el.value}°`;
+      localStorage.setItem(TWIST_KEY, JSON.stringify(state.twist));
+      if (key === 'shoulder') { applyShoulderTilt(); return; }
+      const joint = 'idx24_right_arm_joint5';
+      const raw = link.joints?.[joint];
+      if (typeof raw === 'number') state.target[joint] = calibrated(joint, raw);
+    });
+  };
+  bindTwist('twistShoulder', 'shoulder');
+  bindTwist('twistForearm', 'forearm');
+  applyShoulderTilt();
+
+  $('btnFreeze').addEventListener('click', async () => {
+    const pose = {
+      at: new Date().toISOString(),
+      joints: link.joints,
+      neck: link.neck,
+      hands: link.hands,
+    };
+    state.freeze = true;
+    const json = JSON.stringify(pose);
+    let saved = false;
+    try {
+      const res = await fetch('./debug/pose', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: json });
+      saved = res.ok;
+    } catch { /* static build or server restarted */ }
+    if (saved) {
+      safety.note('pose frozen + saved to the local server — tell the operator', 'warn');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(json);
+      safety.note('pose frozen + copied — connect live to resume', 'warn');
+    } catch {
+      console.log('frozen pose', pose);
+      safety.note('pose frozen; clipboard blocked — see console', 'warn');
+    }
+  });
+
+  $('btnSim').addEventListener('click', () => {
+    const q = new URLSearchParams(location.search);
+    q.set('robot', 'luka-sim');
+    location.search = q.toString();
+  });
+
   $('btnMock').addEventListener('click', () => link.startMock());
 
   $('btnPlay').addEventListener('click', async () => {
@@ -660,7 +773,7 @@ function renderReference() {
  * vendor limits and frames, and the robot's zero is not the model's zero.
  * Calibration is therefore per joint:
  *
- *   model = sign * (measured - offset), clamped to the model's own limits
+ *   model = sign * gain * (measured - offset), clamped to the model's own limits
  *
  * Legs default to offset 0 (absolute URDF angles). Arms and head default to the
  * captured pose as neutral. Signs start at +1 and can be flipped per joint.
@@ -685,16 +798,48 @@ async function loadCalibration() {
     const t = v ? Date.parse(v) : 0;
     return Number.isFinite(t) ? t : 0;
   };
-  const cal = stamp(local) >= stamp(shared) ? local : shared;
+  // A named correction supersedes any local capture older than it: the right-arm
+  // offsets and elbow sign were wrong in every calibration saved before it.
+  const corrected = shared?.correctedAt ? Date.parse(shared.correctedAt) : 0;
+  const preferShared = corrected && stamp(local) < corrected;
+  const cal = preferShared ? shared : (stamp(local) >= stamp(shared) ? local : shared);
   if (!cal?.joints) return null;
+  // A local file captured before gains existed wins on timestamp but lacks the
+  // newer fields. Fill only the gaps from shared, never overwrite local edits.
+  if (cal !== shared && shared?.joints) {
+    for (const [name, s] of Object.entries(shared.joints)) {
+      if (!cal.joints[name]) { cal.joints[name] = { ...s }; continue; }
+      for (const key of ['offset', 'sign', 'gain']) {
+        if (cal.joints[name][key] === undefined) cal.joints[name][key] = s[key];
+      }
+    }
+  }
   if (cal.hands) state.referenceHands = cal.hands;
   return cal;
 }
 
+const TWIST_KEY = 'luka.twist.v1';
+const twistFor = (name) => {
+  if (name === 'idx24_right_arm_joint5') return (state.twist?.forearm || 0) * DEG;
+  return 0;
+};
+
+// Shoulder twist is a tilt of joint 1's axis, so the roll happens at the
+// shoulder rather than mid-bicep. 0 is the pure abduction axis.
+function applyShoulderTilt() {
+  const j = state.model?.joints?.find((x) => x.name === 'idx20_right_arm_joint1');
+  if (!j) return;
+  const a = (state.twist?.shoulder || 0) * DEG;
+  const f = -0.3; // forward cant of the lift plane
+  j.axis = [Math.sin(f), Math.cos(f) * Math.sin(a), Math.cos(f) * Math.cos(a)];
+}
+
 function calibrated(name, value) {
   const c = state.calibration?.joints?.[name];
-  if (!c) return value;
-  const out = c.sign * (value - c.offset);
+  const twist = twistFor(name);
+  if (!c) return value + twist;
+  const gain = Number.isFinite(c.gain) ? c.gain : 1;
+  const out = c.sign * gain * (value - c.offset) + twist;
   const lim = state.limits?.get(name);
   return lim ? clamp(out, lim[0], lim[1]) : out;
 }
@@ -723,12 +868,14 @@ function captureCalibration() {
     joints[name] = {
       offset: isArmOrHead(name) ? live[name] : 0,
       sign: prev[name]?.sign ?? 1,
+      gain: prev[name]?.gain ?? 1,
     };
   }
   for (const name in (link.neck || {})) {
     joints[name] = {
       offset: link.neck[name],
       sign: prev[name]?.sign ?? 1,
+      gain: prev[name]?.gain ?? 1,
     };
   }
   state.calibration = {
@@ -812,10 +959,31 @@ function renderCalibration() {
       n.title = name;
 
       const measured = document.createElement('span');
-      measured.className = 'v';
+      measured.className = 'v measured';
 
       const applied = document.createElement('span');
-      applied.className = 'v';
+      applied.className = 'v applied';
+
+      const gain = document.createElement('input');
+      gain.type = 'number';
+      gain.step = '0.01';
+      gain.min = '0.5';
+      gain.max = '1.5';
+      gain.value = String(Number.isFinite(c.gain) ? c.gain : 1);
+      gain.title = 'gain: <1 reduces travel, >1 increases it';
+      const applyGain = () => {
+        const v = Number(gain.value);
+        if (!Number.isFinite(v) || v < 0.5 || v > 1.5) return;
+        c.gain = v;
+        saveCalibration();
+      };
+      // `input`, not just `change`: typing a gain and watching the arm should not
+      // require clicking away from the field first.
+      gain.addEventListener('input', applyGain);
+      gain.addEventListener('change', () => {
+        applyGain();
+        safety.note(`${name} gain → ${c.gain}`, 'warn');
+      });
 
       const sign = document.createElement('button');
       sign.type = 'button';
@@ -842,9 +1010,9 @@ function renderCalibration() {
         renderCalibration();
       });
 
-      row.append(n, measured, applied, sign, zero);
+      row.append(n, measured, applied, gain, sign, zero);
       list.append(row);
-      state.calRows.set(name, { measured, applied });
+      state.calRows.set(name, { measured, applied, el: row });
     }
   }
 
@@ -859,7 +1027,7 @@ function renderCalibration() {
   const note = $('calNote');
   if (note) {
     note.textContent = hasCal
-      ? `${Object.keys(state.calibration.joints).length} joints · captured ${new Date(state.calibration.capturedAt || state.calibration.savedAt).toLocaleString()}`
+      ? `${Object.keys(state.calibration.joints).length} joints · captured ${new Date(state.calibration.capturedAt || state.calibration.savedAt).toLocaleString()} · gain <1 tames overshoot`
       : 'Uncalibrated: the twin falls back to the convention heuristic.';
   }
   updateCalibrationValues();
@@ -891,7 +1059,17 @@ function updateCalibrationValues() {
     const measured = link.joints?.[name] ?? link.neck?.[name];
     const applied = state.pose?.[name];
     row.measured.textContent = typeof measured === 'number' ? measured.toFixed(2) : '—';
-    row.applied.textContent = typeof applied === 'number' ? applied.toFixed(2) : '—';
+    let pinned = false;
+    const c = state.calibration?.joints?.[name];
+    const lim = state.model?.limits(name);
+    if (c && lim && typeof measured === 'number') {
+      const g = Number.isFinite(c.gain) ? c.gain : 1;
+      const raw = c.sign * g * (measured - c.offset);
+      pinned = (lim.lower !== null && raw < lim.lower) || (lim.upper !== null && raw > lim.upper);
+    }
+    row.applied.textContent = typeof applied === 'number' ? applied.toFixed(2) + (pinned ? ' !' : '') : '—';
+    row.el.classList.toggle('pinned', pinned);
+    row.applied.title = pinned ? 'clamped at the model joint limit — gain/sign cannot move it further' : '';
   }
 }
 
@@ -1066,7 +1244,8 @@ function renderLink() {
   const l = link.snapshot();
   $('linkMode').textContent = l.mode.toUpperCase();
   $('linkMode').dataset.mode = l.mode;
-  $('btnLink').textContent = l.mode === 'live' ? 'disconnect' : 'connect live';
+  $('btnLink').textContent = (l.mode === 'live' || l.mode === 'gateway') ? 'disconnect' : 'connect live';
+  $('btnSim').textContent = l.mode === 'offline' && l.failures >= 3 ? 'simulator (Luka offline)' : 'simulator';
   const rows = [
     ['endpoint', l.mode === 'mock' ? 'mock generator' : '192.168.4.136:56322'],
     ['age', l.fresh ? 'fresh' : l.ageMs === Infinity ? 'no data' : `${Math.round(l.ageMs)} ms`],
@@ -1078,7 +1257,7 @@ function renderLink() {
     .map(([k, v]) => `<div class="kv"><span>${k}</span><b>${escapeHtml(String(v))}</b></div>`)
     .join('');
   if (l.error) $('linkBody').innerHTML += `<div class="kv err"><span>error</span><b>${escapeHtml(l.error)}</b></div>`;
-  safety.setLinkFresh(l.fresh && (l.mode === 'live' || l.mode === 'mock'));
+  safety.setLinkFresh(l.fresh && (l.mode === 'live' || l.mode === 'gateway' || l.mode === 'mock'));
 }
 
 function renderLog(ev) {

@@ -1,0 +1,219 @@
+{
+  "inspectionDate": "2026-11-06",
+  "scope": "read-only RPC and MQTT subscriptions; decoded camera captures",
+  "physicalCommandsIssued": 0,
+  "access": {
+    "jump": "agi@192.168.4.152",
+    "target": "agi@192.168.100.110",
+    "host": "ubuntu-orin",
+    "architecture": "aarch64"
+  },
+  "headReadings": {
+    "inspectedAtUtc": "2026-11-06T07:18:32.348783+00:00",
+    "neck": {
+      "header": {
+        "code": "0",
+        "msg": "called successfully.",
+        "timestamp": {
+          "seconds": "1793949512",
+          "nanos": 362791935,
+          "ms_since_epoch": "0"
+        },
+        "trace_id": "",
+        "domin": ""
+      },
+      "data": {
+        "shake": {
+          "name": "idx27_head_joint1",
+          "sequence": 0,
+          "position": 0.01788853295147419,
+          "velocity": 0,
+          "effort": -0.3009999990463257
+        },
+        "nod": {
+          "name": "idx28_head_joint2",
+          "sequence": 0,
+          "position": -0.04446171224117279,
+          "velocity": 0,
+          "effort": -0.20640000700950623
+        }
+      }
+    },
+    "action": {
+      "header": {
+        "code": "0",
+        "msg": "called successfully.",
+        "timestamp": {
+          "seconds": "1793949512",
+          "nanos": 366581581,
+          "ms_since_epoch": "0"
+        },
+        "trace_id": "",
+        "domin": ""
+      },
+      "info": {
+        "current_action": "McAction_RL_LOCOMOTION_ARM_EXT_JOINT_SERVO",
+        "ext_action": "",
+        "status": "McActionStatus_RUNNING"
+      }
+    },
+    "motionPlayer": {
+      "header": {
+        "code": "0",
+        "msg": "",
+        "timestamp": {
+          "seconds": "1793949512",
+          "nanos": 369304577,
+          "ms_since_epoch": "0"
+        },
+        "trace_id": "",
+        "domin": ""
+      },
+      "time_to_end_ms": "-24776",
+      "status": "MotionCommandStatus_IDLE",
+      "is_neck_enable": true,
+      "motion_id": "/agibot/data/resources/default/motion/灵动环顾3/灵动环顾3.mcap"
+    },
+    "relayArguments": [
+      "/usr/bin/python3",
+      "-u",
+      "/home/agi/.local/share/luka-sensor-relay/releases/20261103-v6-media/a2_joint_relay.py",
+      "--hz",
+      "20",
+      "--sensors-hz",
+      "5",
+      "--cameras",
+      "head_front,waist_front,chest_left,chest_right,interactive",
+      "--camera-keyframes",
+      "interactive",
+      "--lidar-hz",
+      "3",
+      "--lidar-stride",
+      "3",
+      "--depth",
+      "waist_front,head_front",
+      "--depth-hz",
+      "2",
+      "--depth-scale",
+      "4",
+      "--legacy",
+      "on",
+      "--v2",
+      "",
+      ""
+    ],
+    "calibrationFiles": [
+      "/agibot/data/param/hal/intrinsic/head_front_depth.yaml",
+      "/agibot/data/param/hal/intrinsic/head_front_color.yaml",
+      "/agibot/data/param/hal/intrinsic/interactive.yaml"
+    ]
+  },
+  "cameraSampling": {
+    "capturedAtUtc": "2026-11-06T07:15:12.366365+00:00",
+    "durationSeconds": 7,
+    "mqttSources": {
+      "a2remote/joints": {
+        "messages": 128,
+        "bytes": 126809
+      },
+      "a2remote/camera/head_front/h264": {
+        "messages": 35,
+        "bytes": 40971
+      },
+      "a2remote/sensors": {
+        "messages": 32,
+        "bytes": 18272
+      },
+      "a2remote/camera/interactive/h264": {
+        "messages": 7,
+        "bytes": 619380
+      }
+    },
+    "formats": {
+      "head_front": [
+        {
+          "codec_name": "h264",
+          "profile": "Constrained Baseline",
+          "width": 1280,
+          "height": 720
+        }
+      ],
+      "interactive": [
+        {
+          "codec_name": "h264",
+          "profile": "Main",
+          "width": 1920,
+          "height": 1536
+        }
+      ]
+    },
+    "decodedSnapshots": {
+      "head_front": {
+        "ok": true,
+        "path": "/tmp/luka-hardware-inspection/head_front.jpg"
+      },
+      "interactive": {
+        "ok": true,
+        "path": "/tmp/luka-hardware-inspection/interactive.jpg"
+      }
+    }
+  },
+  "sensorComponentsObserved": [
+    "imu",
+    "odom",
+    "lidar_imu"
+  ],
+  "slamPoseSeenInSample": false,
+  "geometrySampling": {
+    "durationSeconds": 3,
+    "formats": "legacy only; --v2 is an empty argument",
+    "topics": {
+      "a2remote/lidar/neck": {
+        "messages": 8,
+        "bytes": 160659,
+        "format": "LDR1",
+        "lastPointCount": 2840
+      },
+      "a2remote/depth/head_front": {
+        "messages": 5,
+        "bytes": 576040,
+        "format": "DEP1",
+        "width": 320,
+        "height": 180
+      },
+      "a2remote/depth/waist_front": {
+        "messages": 5,
+        "bytes": 192040,
+        "format": "DEP1",
+        "width": 160,
+        "height": 120
+      }
+    }
+  },
+  "protocolEvidence": {
+    "sdkRoot": "/agibot/dev/AimDK/agibot_a2_aimdk-dev2.0",
+    "files": [
+      "examples/mc/SetNeckCommand.py",
+      "examples/mc/neck.py",
+      "examples/motion_player/disable_neck_motion_player.sh",
+      "examples/motion_player/enable_neck_motion_player.sh",
+      "protocol/protobuf/aimdk/protocol/hal/neck/neck.proto",
+      "protocol/protobuf/aimdk/protocol/mc/motion/mc_motion_service.proto",
+      "protocol/protobuf/aimdk/protocol/motion_player/motion_command.proto"
+    ],
+    "documentedYawRadians": [
+      -0.785,
+      0.785
+    ],
+    "documentedPitchRadians": [
+      -0.401,
+      0.401
+    ]
+  },
+  "externalMemorySources": {
+    "corachatReadmeFileSha": "6f4a42b5696a033d317fab35fc60c6bdb6b2b393",
+    "trellisRepositoryRevision": "be500f94db26ba18ef7bc77ee23742a684993b57",
+    "trellisMemoryServiceFileSha": "0edb28dae5dc9e9d162de151f06f02581d337833",
+    "trellisStoreFileSha": "ef8ce031ee5cefd747d16171b4a13f39b0e44658"
+  }
+}

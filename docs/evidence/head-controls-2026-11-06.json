@@ -1,0 +1,121 @@
+{
+  "initial": {
+    "connected": true,
+    "measured": {
+      "yaw": 0.05090329051017761,
+      "pitch": -0.035626135766506195
+    },
+    "target": null,
+    "start": null,
+    "factoryNeckEnabled": true,
+    "action": "McAction_RL_LOCOMOTION_ARM_EXT_JOINT_SERVO",
+    "sessionActive": false,
+    "note": "Factory control",
+    "clockMs": 1793951205691,
+    "sampledAt": 1793951204795,
+    "busy": false,
+    "lease": null,
+    "serverNow": 1793951204795,
+    "stepDeg": 2,
+    "envelopeDeg": {
+      "yaw": 10,
+      "pitch": 5
+    }
+  },
+  "checks": [
+    {
+      "button": "Look left",
+      "measured": {
+        "yaw": 0.08482743054628372,
+        "pitch": -0.035626135766506195
+      },
+      "target": {
+        "yaw": 0.0858098755500642,
+        "pitch": -0.035626135766506195
+      },
+      "note": "Jog reached its measured target"
+    },
+    {
+      "button": "Return to start",
+      "measured": {
+        "yaw": 0.05187816545367241,
+        "pitch": -0.035626135766506195
+      },
+      "target": {
+        "yaw": 0.05090329051017761,
+        "pitch": -0.035626135766506195
+      },
+      "note": "Returned to start"
+    },
+    {
+      "button": "Look up",
+      "measured": {
+        "yaw": 0.05100865662097931,
+        "pitch": -0.0638633444905281
+      },
+      "target": {
+        "yaw": 0.05127349868416786,
+        "pitch": -0.07053272080639278
+      },
+      "note": "Jog reached its measured target"
+    },
+    {
+      "button": "Return to start",
+      "measured": {
+        "yaw": 0.051153894513845444,
+        "pitch": -0.04222434014081955
+      },
+      "target": {
+        "yaw": 0.05090329051017761,
+        "pitch": -0.035626135766506195
+      },
+      "note": "Returned to start"
+    }
+  ],
+  "start": {
+    "yaw": 0.05090329051017761,
+    "pitch": -0.035626135766506195
+  },
+  "startImage": "/tmp/luka-head-browser/live-start.jpg",
+  "panImage": "/tmp/luka-head-browser/live-left.jpg",
+  "tiltImage": "/tmp/luka-head-browser/live-up.jpg",
+  "released": {
+    "connected": true,
+    "measured": {
+      "yaw": 0.05109124258160591,
+      "pitch": -0.03763948380947113
+    },
+    "target": null,
+    "start": null,
+    "factoryNeckEnabled": true,
+    "action": "McAction_RL_LOCOMOTION_ARM_EXT_JOINT_SERVO",
+    "sessionActive": false,
+    "note": "Head controls released",
+    "clockMs": 1793951212453,
+    "sampledAt": 1793951211556,
+    "busy": false,
+    "lease": null,
+    "serverNow": 1793951211556,
+    "stepDeg": 2,
+    "envelopeDeg": {
+      "yaw": 10,
+      "pitch": 5
+    }
+  },
+  "watchdog": {
+    "passed": true,
+    "movementCommands": 0,
+    "waitSeconds": 10.8,
+    "factoryNeckEnabled": true,
+    "note": "Controls released after heartbeat timeout"
+  },
+  "validation": {
+    "gatewayTests": 108,
+    "workerTests": 15,
+    "browserViewports": [
+      "desktop",
+      "phone"
+    ],
+    "scope": "2 degree pan and tilt targets, return after each, then factory ownership restored"
+  }
+}

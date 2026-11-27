@@ -37,7 +37,7 @@ test('wrist envelope matches the vendor recommendation', async () => {
   assert.equal(Object.keys(WRIST_ENVELOPE).length, Object.keys(schema.limits.recommendedEnvelope).length - 1);
 });
 
-test('head limits match the URDF when the model payload is present', async (t) => {
+test('head command limits stay inside the visualization model travel', async (t) => {
   let model;
   try {
     model = JSON.parse(await readFile(new URL('model/generated/luka.model.json', ROOT), 'utf8'));
@@ -46,8 +46,13 @@ test('head limits match the URDF when the model payload is present', async (t) =
     return;
   }
   const byName = Object.fromEntries(model.joints.map((j) => [j.name, j]));
-  assert.deepEqual([byName.idx27_head_joint1.lower, byName.idx27_head_joint1.upper], HEAD_LIMITS.joint1);
-  assert.deepEqual([byName.idx28_head_joint2.lower, byName.idx28_head_joint2.upper], HEAD_LIMITS.joint2);
+  for (const [name, range] of [
+    ['idx27_head_joint1', HEAD_LIMITS.joint1],
+    ['idx28_head_joint2', HEAD_LIMITS.joint2],
+  ]) {
+    assert.ok(range[0] >= byName[name].lower, `${name}: lower command limit exceeds model travel`);
+    assert.ok(range[1] <= byName[name].upper, `${name}: upper command limit exceeds model travel`);
+  }
 });
 
 test('the arm schema stays disabled in the cockpit', async () => {
@@ -59,6 +64,18 @@ test('valid head gaze passes', () => {
   const r = validatePayload('head.gaze', { yaw: 0.4, pitch: -0.2 });
   assert.equal(r.ok, true);
   assert.deepEqual(r.warnings, []);
+});
+
+test('both head commands reject model-valid angles beyond the vendor neck envelope', () => {
+  for (const [capability, yaw, pitch] of [
+    ['head.gaze', 'yaw', 'pitch'],
+    ['head.joints', 'joint1', 'joint2'],
+  ]) {
+    for (const [y, p] of [[0.786, 0], [-0.786, 0], [0, 0.402], [0, -0.402]]) {
+      assert.equal(validatePayload(capability, { [yaw]: y, [pitch]: p }).ok, false, `${capability}: ${y}, ${p}`);
+    }
+    assert.equal(validatePayload(capability, { [yaw]: 0.785, [pitch]: -0.401 }).ok, true);
+  }
 });
 
 test('out-of-range values are refused with the binding limit, not clamped', () => {

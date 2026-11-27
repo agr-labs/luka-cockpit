@@ -1,0 +1,50 @@
+{
+  "/chat/transcribe": {
+    "transcript": "Hello, Luca. Can you hear me clearly? Hello, Luca.",
+    "audio_info": {
+      "channels": 1,
+      "rate": 16000,
+      "width": 2,
+      "frames": 45056,
+      "seconds": 2.816
+    },
+    "timings": {
+      "asr_ms": 391
+    }
+  },
+  "/chat/reason": {
+    "reply": "Yes, I can hear you clearly. Hello to you too—I'm right here in front of you.",
+    "llm": "prism",
+    "degraded": null,
+    "timings": {
+      "llm_ms": 1251
+    }
+  },
+  "/say": {
+    "ok": true,
+    "provider": "inworld",
+    "voice": "Ashley",
+    "rate": 0.75,
+    "pitch": -2,
+    "pitchUnit": "semitones",
+    "model": "inworld-tts-2",
+    "chunks": 2,
+    "bytes": 312340,
+    "durationMs": 6507,
+    "files": [
+      "say_1793998969553_0wsb_0.pcm",
+      "say_1793998969553_0wsb_1.pcm"
+    ]
+  },
+  "ui": {
+    "status": "Luka has finished. Hold to continue.",
+    "question": "Hello, Luca. Can you hear me clearly? Hello, Luca.",
+    "reply": "Yes, I can hear you clearly. Hello to you too—I'm right here in front of you."
+  },
+  "testInput": "Browser fake microphone fed a known recorded clip; real Whisper, Prism and robot playback were used.",
+  "viewports": [
+    "desktop 1280x900",
+    "phone 390x844",
+    "landscape 844x390"
+  ]
+}

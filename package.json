@@ -7,8 +7,15 @@
   "scripts": {
     "start": "node serve.mjs",
     "gateway": "node gateway/server.mjs",
+    "voice": "node tools/luka-bridge.mjs",
+    "face-follow:setup": "sh tools/setup-face-follow.sh",
     "test": "node --test gateway/test/*.test.mjs",
-    "test:cockpit": "node tools/verify-fk.mjs"
+    "test:head": "python3 -B tools/test_luka_head_worker.py",
+    "test:controller": "node --test tools/lukachat-controller.test.mjs",
+    "test:chat": "python3 -B tools/test_luka_chat_asr.py",
+    "test:playback": "python3 -B tools/test_luka_playback.py",
+    "test:cockpit": "node tools/verify-fk.mjs",
+    "test:sim": "node --test tools/test-luka-sim.mjs"
   },
   "engines": {
     "node": ">=22"

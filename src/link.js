@@ -23,6 +23,11 @@ export class RobotLink extends EventTarget {
     this.polling = false;
     this.jointTimer = null;
     this.jointPolling = false;
+    this.jointRunning = false;
+    this.gatewayTimer = null;
+    this.gatewayBase = '';
+    this.liveRunId = 0;
+    this.jointRunId = 0;
     this.joints = {};        // name -> radians
     this.neck = {};          // idx27/idx28 -> radians
     this.hands = {};         // side -> { fingerKey: 0..2000 }
@@ -44,9 +49,49 @@ export class RobotLink extends EventTarget {
     this.mode = 'live';
     this.failures = 0;
     this.startJoints();
+    const runId = ++this.liveRunId;
     const tick = async () => {
+      if (runId !== this.liveRunId) return;
       if (!this.polling) await this.poll();
-      this.timer = setTimeout(tick, 1000 / POLL_HZ);
+      if (runId === this.liveRunId && this.mode === 'live') this.timer = setTimeout(tick, 1000 / POLL_HZ);
+    };
+    tick();
+  }
+
+  startGateway(robotId, base = '') {
+    this.stop();
+    this.mode = 'gateway';
+    this.robotId = robotId;
+    this.gatewayBase = base || `${location.protocol}//${location.hostname}:8788`;
+    const tick = async () => {
+      if (this.mode !== 'gateway') return;
+      try {
+        const [jr, sr] = await Promise.all([
+          fetch(`${this.gatewayBase}/api/v1/robots/${robotId}/joints`, { signal: AbortSignal.timeout(3000) }),
+          fetch(`${this.gatewayBase}/api/v1/robots/${robotId}/state`, { signal: AbortSignal.timeout(3000) }),
+        ]);
+        const j = await jr.json();
+        const s = await sr.json();
+        if (j?.joints) {
+          this.joints = j.joints;
+          this.jointAt = performance.now();
+          this.jointCount = Object.keys(j.joints).length;
+          this.dispatchEvent(new CustomEvent('joints', { detail: { joints: this.joints, count: this.jointCount } }));
+        }
+        this.last = { info: { current_action: s.action, status: s.health } };
+        this.lastOkAt = performance.now();
+        this.failures = 0;
+        this.dispatchEvent(new CustomEvent('update', { detail: this.snapshot() }));
+      } catch (err) {
+        this.failures++;
+        this.lastError = String(err.message || err);
+        if (this.failures >= 3) {
+        this.mode = 'offline';
+        if (this.timer) clearTimeout(this.timer);
+        this.timer = null;
+      }
+      }
+      if (this.mode === 'gateway') this.gatewayTimer = setTimeout(tick, 200);
     };
     tick();
   }
@@ -76,14 +121,20 @@ export class RobotLink extends EventTarget {
   /** Poll measured joint angles. Separate cadence from the mode poll. */
   startJoints() {
     if (this.jointTimer) clearTimeout(this.jointTimer);
+    this.jointRunning = true;
+    this.jointErrors = 0;
+    const runId = ++this.jointRunId;
     const tick = async () => {
+      if (runId !== this.jointRunId || !this.jointRunning) return;
       if (!this.jointPolling) await this.pollJoints();
-      this.jointTimer = setTimeout(tick, 1000 / JOINT_HZ);
+      if (runId === this.jointRunId && this.jointRunning) this.jointTimer = setTimeout(tick, 1000 / JOINT_HZ);
     };
     tick();
   }
 
   stopJoints() {
+    this.jointRunning = false;
+    this.jointRunId++;
     if (this.jointTimer) clearTimeout(this.jointTimer);
     this.jointTimer = null;
     this.joints = {};
@@ -101,7 +152,7 @@ export class RobotLink extends EventTarget {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: '{}',
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(2000),
       });
       const json = await res.json();
       if (json && json.__proxyError) throw new Error(json.message || 'proxy error');
@@ -121,7 +172,10 @@ export class RobotLink extends EventTarget {
       this.dispatchEvent(new CustomEvent('joints', { detail: { joints: next, count: states.length } }));
     } catch (err) {
       this.jointErrors++;
-      if (this.jointErrors > 5) this.jointAt = 0; // declare the stream dead, don't freeze on the last pose
+      if (this.jointErrors >= 3) {
+        this.jointAt = 0;
+        this.stopJoints(); // stop hammering a dead proxy; 'connect live' restarts it
+      }
     } finally {
       this.jointPolling = false;
     }
@@ -164,9 +218,12 @@ export class RobotLink extends EventTarget {
   }
 
   stop() {
+    this.liveRunId++;
     this.stopJoints();
     if (this.timer) clearTimeout(this.timer);
+    if (this.gatewayTimer) clearTimeout(this.gatewayTimer);
     this.timer = null;
+    this.gatewayTimer = null;
     this.mode = 'offline';
     this.dispatchEvent(new CustomEvent('update', { detail: this.snapshot() }));
   }

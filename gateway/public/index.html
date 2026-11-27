@@ -18,6 +18,8 @@
   <div class="top-right">
     <span id="gwMeta" class="meta">connecting…</span>
     <a id="twinLink" class="tag" href="http://127.0.0.1:8787/" title="Digital twin — cockpit server on :8787">twin</a>
+    <a class="tag" href="./voice.html">voice</a>
+    <a id="audioLink" class="tag" href="http://127.0.0.1:8790/">audio</a>
     <a class="tag" href="./lidar.html">lidar space</a>
     <a class="tag" href="./room.html">room sensors</a>
     <button id="btnAuth" class="ghost small" hidden>token</button>
@@ -128,5 +130,6 @@
 </main>
 
 <script type="module" src="./console.js"></script>
+<script>addEventListener("DOMContentLoaded",()=>{const a=document.getElementById("audioLink"); if(a) a.href=`http://${location.hostname}:8790/`;});</script>
 </body>
 </html>

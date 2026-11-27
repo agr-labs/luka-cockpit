@@ -2,9 +2,11 @@
 
 Operational access state, the 2026-11-03 lockout, and the recovery ladder.
 
-**Current status: SSH is key-only, and no authorised key is on this Mac.** The robot is
-reachable (`192.168.4.136`, ICMP + ports 22/56322/56444/59001/5000) but no shell is available.
-The HTTP read path is unaffected.
+**Current status (2026-11-06): SSH works through the X86 jump host
+`agi@192.168.4.152` to Orin `agi@192.168.100.110`.** This path is used by the
+voice bridge and the verified head/camera inspection. See
+[LukaChat hardware findings](lukachat-head-camera-analysis.md).
+The lockout and recovery material below records the historical 2026-11-03 state.
 
 ---
 
@@ -130,3 +132,45 @@ non-destructive escalation path if no console is available.
 No key → no process on the robot → no ROS 2 bridge → no LiDAR, no camera stream, no arm
 command, no robot-side sandbox ([sandbox](sandbox.md)). The entire read-only surface is what we
 have until access returns.
+
+## Off-LAN path (jump host)
+
+Luka's Orin is `192.168.100.110`; the x86 that runs AimDK is
+**`192.168.100.100:56322`**. The Orin itself does not listen on 56322.
+
+```bash
+# shell on the Orin
+ssh -J agi@192.168.4.152 agi@192.168.100.110
+
+# local AimDK tunnel (keep running)
+sh tools/luka-tunnel.sh
+# = ssh -N -L 127.0.0.1:56322:192.168.100.100:56322 -J agi@192.168.4.152 agi@192.168.100.110
+```
+
+The jump host authenticates from the SSH agent; `lukakey` is for Luka, not the
+jump. The cockpit and gateway now point at `127.0.0.1:56322`:
+
+```bash
+A2_HOST=127.0.0.1 A2_PORT=56322 node serve.mjs
+# gateway/config/robots.json: robots[luka].options.host = "127.0.0.1"
+```
+
+If the tunnel drops, both report Luka offline; restart `tools/luka-tunnel.sh`.
+
+## Staff network reconnect — 2026-11-07
+
+The Mac joined the staff network at `192.168.80.19/22`. Luka's matching AimDK
+services were found at `192.168.80.22:56322` and `:59001`; the SSH host key matches
+the previously used `192.168.4.152` jump host. A read-only `GetAction` returned
+`McAction_RL_LOCOMOTION_DEFAULT`. No motion mode was changed.
+
+The bridge now reads its last-known jump and Orin target from
+`config/luka-connection.json`; `LUKA_JUMP` and `LUKA_TARGET` still override them.
+The current addresses are `agi@192.168.80.22` and `agi@192.168.100.110`.
+
+Network reachability is restored, but SSH to the jump host rejects the existing
+Mac identities, including the dedicated project key. This is an authorization
+failure rather than evidence that Luka is powered off. The bridge reports an SSH
+access problem separately. Voice playback, camera capture and the bounded head
+worker remain unavailable until a trusted local/admin session restores the
+Mac's authorized key. No authentication settings or robot files were changed.

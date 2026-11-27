@@ -6,6 +6,11 @@ unknown. Companion docs: [runbook](runbook.md) · [safety](safety.md) ·
 
 Dates are 2026-10. "Verified" means observed against Luka, not read in a document.
 
+2026-11-06 update: the working SSH jump path, neck ownership, installed head
+command protocols, and captured camera/depth/LiDAR feeds are documented in the
+[LukaChat head/camera analysis](lukachat-head-camera-analysis.md). Its live
+observations supersede the older missing-access and missing-camera statements.
+
 ---
 
 # 1. Verified interfaces
@@ -93,10 +98,12 @@ Finger rendering needs a caveat the other two do not: the vendor URDF has **no f
 geometry and no finger joints** — each hand is a single STL. The cockpit maps the reported
 channel **absolutely** (0 open → 2000 closed); it does not subtract a captured "straight"
 reference, because a hand sitting at 1075 is half-closed, not open. The live readout in the
-calibration panel shows all six channels per hand. The cockpit therefore appends
-ten **synthetic** finger boxes, positioned from the hand link's bounding box and curled from
-the telemetry. They are an approximation and are labelled as such in code; they never feed
-anything back to the robot.
+calibration panel shows all six channels per hand. The twin therefore mounts an **Inspire RH56DFX** hand model (MIT, decimated) at each wrist,
+scaled 1.32 and driven by those six channels, with the URDF mimic joints for the distal
+segments. It is an approximation: Luka's welded hand measures 163 × 210 × 55 mm, the RH56
+82 × 159 × 101 mm, so shape and mount are estimated. `HAND=0 node tools/build-model.mjs`
+restores the welded hand plus synthetic boxes. Finger telemetry is display-only and never
+feeds back to the robot.
 
 ## 1.6 Why `SetAction` was accepted and ignored
 
@@ -187,6 +194,14 @@ point clouds.
 Reachability, same as the arm topic: none from here. A bounded check found only 22, 5000, 56322,
 59001 and 56444 open, with no rosbridge (9090) or Foxglove bridge (8765). The gateway therefore
 carries a simulator and a binary ingest endpoint, and waits for a robot-side publisher.
+
+
+## 1.10 Arm axis correction (2026-11-03)
+
+`direction_upper left` drove Luka's left arm up and out, while the twin swung it 30 cm behind.
+A synchronized trace of all seven left-arm joints, replayed through the model, showed the cause:
+`idx14_left_arm_joint2` is the **abduction** axis (local −X), not the assumed pitch axis.
+`tools/build-model.mjs` now overrides that axis. Right shoulder `idx21` awaits the same test.
 
 # 2. The motion state machine, as observed
 

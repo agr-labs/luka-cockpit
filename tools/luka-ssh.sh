@@ -18,8 +18,11 @@
 set -eu
 
 HOST=${LUKA_HOST:-192.168.4.136}
+JUMP=${LUKA_JUMP:-}
 USER_NAME=${LUKA_USER:-agi}
-SSH_KEY=${LUKA_SSH_KEY:-}
+SSH_KEY=${LUKA_SSH_KEY:-$HOME/.ssh/lukakey}
+SSH_JUMP=""
+[ -n "$JUMP" ] && SSH_JUMP="-J $JUMP"
 ROBOT_MAC=${LUKA_MAC:-ac:45:ef}
 BOOT_WAIT_NOTE="Luka answers ICMP/SSH ~40 s after power-on and 56322 at ~85 s. A half-booted robot looks dead."
 
@@ -111,7 +114,9 @@ run_remote() {
   if [ -n "$SSH_KEY" ]; then
     # Key auth: no password, no askpass, no prompt. This is the supported path
     # on the installed image (password auth is disabled there).
-    ssh -i "$SSH_KEY" -o IdentitiesOnly=yes -o BatchMode=yes \
+    IDENT="-o IdentitiesOnly=yes"
+    [ -n "$JUMP" ] && IDENT=""
+    ssh $SSH_JUMP -i "$SSH_KEY" $IDENT -o BatchMode=yes \
         -o StrictHostKeyChecking=accept-new \
         -o ConnectTimeout=6 \
         "$USER_NAME@$HOST" "$1"
@@ -121,7 +126,7 @@ run_remote() {
   read_password
   askpass_init
   SSH_ASKPASS="$ASKPASS" SSH_ASKPASS_REQUIRE=force DISPLAY="${DISPLAY:-:0}" \
-    ssh -o StrictHostKeyChecking=accept-new \
+    ssh $SSH_JUMP -o StrictHostKeyChecking=accept-new \
         -o ConnectTimeout=6 \
         -o NumberOfPasswordPrompts=1 \
         -o PreferredAuthentications=password,keyboard-interactive \

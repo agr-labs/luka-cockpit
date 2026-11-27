@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c0f">
+<title>Luka Voice Console</title>
+<link rel="stylesheet" href="./console.css">
+<style>
+  /* The gateway console styles `main` as its own 3-column grid. The voice page
+     is a separate shell: reset it explicitly and lay out two columns above 1000px. */
+  main.voice-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 18px;
+    align-items: start;
+  }
+  .voice-main, .voice-side { display: grid; gap: 14px; align-content: start; min-width: 0; }
+  @media (min-width: 1000px) {
+    main.voice-wrap { grid-template-columns: minmax(0, 1.08fr) minmax(340px, .92fr); }
+  }
+
+  .voice-hero { display: grid; gap: 13px; justify-items: center; padding: 20px 18px; }
+  .voice-status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; width: 100%; }
+  .voice-status label { font-size: 12px; color: #7f95a5; }
+  .voice-status select { flex: 1 1 240px; min-width: 0; max-width: 420px; }
+  .voice-status .tag { white-space: nowrap; }
+
+  .mic-btn {
+    width: 118px; height: 118px; border-radius: 50%; border: 1px solid #2b3a46;
+    background: radial-gradient(circle at 35% 30%, #1d2a33, #0d1318);
+    color: #e7eef4; font-size: 14px; line-height: 1.25; letter-spacing: .06em;
+    text-transform: uppercase; cursor: pointer; transition: .15s ease;
+    touch-action: manipulation;
+  }
+  .mic-btn:hover { border-color: #3f6075; }
+  .mic-btn[data-listening="true"] {
+    background: radial-gradient(circle at 35% 30%, #7a1f2b, #24070c);
+    border-color: #b23a4a; box-shadow: 0 0 0 8px rgba(178,58,74,.12);
+  }
+
+  .transcript { min-height: 56px; width: 100%; text-align: center; font-size: 17px; line-height: 1.45; color: #dce8f1; overflow-wrap: anywhere; }
+  .intent { min-height: 20px; font-size: 13px; color: #8fa6b6; text-align: center; overflow-wrap: anywhere; }
+
+  .meterrow { display: grid; grid-template-columns: 34px minmax(0, 1fr) 78px; gap: 8px; align-items: center; width: 100%; font-size: 11px; color: #7f95a5; }
+  .meter { height: 8px; border-radius: 4px; background: #0a1015; border: 1px solid #1a262f; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg,#2f7f6c,#9fd7c8); transition: width .06s linear; }
+  .meter i.hot { background: linear-gradient(90deg,#9a5a1f,#ffb020); }
+
+  .voice-actions { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .textrow { display: flex; gap: 8px; width: 100%; }
+  .textrow input { flex: 1 1 auto; min-width: 0; }
+  .voice-hint { font-size: 11px; color: #6d8191; text-align: center; line-height: 1.5; }
+
+  .log { display: grid; gap: 6px; max-height: 300px; overflow: auto; font-size: 12px; }
+  .log .item { padding: 7px 9px; border: 1px solid #1a262f; border-radius: 6px; background: #0c1217; overflow-wrap: anywhere; }
+  .log .item b { color: #9fd7c8; font-weight: 600; }
+  .voice-wrap .card-head { flex-wrap: wrap; gap: 6px; }
+  .muted { color: #7f95a5; }
+  .card-head .small { min-height: 34px; }
+
+  /* Touch sizing: tablet and trackpad get real targets; inputs avoid iOS zoom. */
+  .voice-wrap button, .voice-wrap select, .voice-wrap input[type="text"] { min-height: 40px; }
+  .voice-wrap input[type="text"], .voice-wrap select { font-size: 16px; }
+  @media (pointer: coarse) {
+    .voice-wrap button, .voice-wrap select, .voice-wrap input[type="text"],
+    .voice-wrap .card-head .small { min-height: 44px; }
+  }
+  @media (max-width: 999px) {
+    main.voice-wrap { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+    .voice-hero { padding: 16px 12px; }
+    .mic-btn { width: 104px; height: 104px; }
+  }
+  @media (max-width: 620px) {
+    .voice-status { justify-content: stretch; }
+    .voice-status select { flex-basis: 100%; max-width: none; }
+    .voice-status label { display: none; }
+    .mic-btn { width: 94px; height: 94px; font-size: 13px; }
+    .voice-actions button { flex: 1 1 auto; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="dot" id="gwDot" data-state="down"></span>
+    <strong>Luka Voice Console</strong>
+    <span class="tag">voice</span>
+  </div>
+  <div class="top-right">
+    <a class="tag" href="./">gateway console</a>
+    <a id="audioLink" class="tag" href="http://127.0.0.1:8790/">audio</a>
+    <a class="tag" href="http://127.0.0.1:8787/" id="twinLink">twin</a>
+  </div>
+</header>
+
+<main class="voice-wrap">
+  <div class="voice-main">
+    <section class="card voice-hero">
+      <div class="voice-status">
+        <label for="robotSel">robot</label>
+        <select id="robotSel"></select>
+        <button id="btnLease" class="small" type="button">take lease</button>
+        <span id="leaseState" class="tag muted">no lease</span>
+      </div>
+      <div id="voiceState" class="muted" style="font-size:12px;text-align:center"></div>
+
+      <button id="micBtn" class="mic-btn" data-listening="false" type="button" aria-label="Start or stop microphone">tap<br>to talk</button>
+      <div id="transcript" class="transcript" aria-live="polite">Say “look left”, “close hands”, “say hello”, or “stop”.</div>
+      <div id="intent" class="intent" aria-live="polite"></div>
+
+      <div class="meterrow"><span>mic</span><div class="meter"><i id="micBar"></i></div><span id="micState">idle</span></div>
+      <div class="voice-actions">
+        <button id="btnTestVoice" class="small" type="button">test speaker</button>
+        <span id="ttsState" class="muted" style="font-size:12px">audio idle · click “test speaker” once</span>
+      </div>
+
+      <div class="textrow">
+        <input id="textCmd" type="text" placeholder="type a command (works without a microphone)" autocomplete="off" enterkeyhint="send">
+        <button id="btnSend" class="small" type="button">send</button>
+      </div>
+      <div class="voice-hint">Voice commands go through the lease and capability gates. Physical Luka is observe-only; select the simulator to execute.</div>
+    </section>
+
+    <section class="card">
+      <details>
+        <summary class="muted">What it can do</summary>
+        <p class="muted" style="font-size:13px;line-height:1.6">
+          The browser recognises speech, maps it to a capability, and sends it through the gateway’s
+          lease and validation gates. Supported: look up/down/left/right/centre, open/close hands,
+          say &lt;text&gt;, listen on/off, status, and stop. On a physical robot a lease in
+          <b>observe</b> mode is read-only; commands are refused by the gateway. Voice never
+          bypasses the e-stop or profile locks.
+        </p>
+      </details>
+    </section>
+  </div>
+
+  <aside class="voice-side">
+    <section class="card">
+      <div class="card-head">
+        <h2>Conversation transcript</h2>
+        <span>
+          <button id="btnCopyConvo" class="small ghost" type="button">copy</button>
+          <button id="btnDownloadConvo" class="small ghost" type="button">download</button>
+          <button id="btnClearConvo" class="small ghost" type="button">clear</button>
+        </span>
+      </div>
+      <div id="convo" class="log" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Gateway audit</h2>
+        <span class="muted" style="font-size:11px">last 12 · 2.5 s</span>
+      </div>
+      <div id="auditList" class="log"></div>
+    </section>
+  </aside>
+</main>
+
+<script type="module" src="./voice.js"></script>
+<script>addEventListener("DOMContentLoaded",()=>{const a=document.getElementById("audioLink"); if(a) a.href=`http://${location.hostname}:8790/`;});</script>
+</body>
+</html>

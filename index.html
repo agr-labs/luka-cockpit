@@ -1,216 +1,816 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Steadwell · Luka A2 Ultra Cockpit</title>
-<link rel="stylesheet" href="./styles.css" />
-</head>
-<body data-mode="MANUAL">
-  <div id="banner" class="banner"></div>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#05070b" />
+  <title>Steadwell · Meet Luka v. A2U</title>
+  <meta name="description" content="Meet Luka v. A2U — talk live, mirror hand and arm movements with your webcam, and explore full-body 3D robotics right in your browser. Own Luka through VaultBots." />
+  <link rel="canonical" href="https://luka.steadwell.cc/" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
 
-  <div id="boot" class="boot">
-    <div class="bootbox">
-      <div class="bootmark"></div>
-      <div class="boottitle">LUKA · A2 ULTRA</div>
-      <div id="bootMsg" class="bootmsg">starting…</div>
-      <div class="bootbar"><i id="bootBar"></i></div>
-      <div id="bootHint" class="boothint">estimated twin · not calibrated to the hardware</div>
-    </div>
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Steadwell Robotics" />
+  <meta property="og:title" content="Meet Luka v. A2U · Talk, Move &amp; Explore Live" />
+  <meta property="og:description" content="Voice conversation, webcam hand &amp; arm mirroring, and full-body 3D explorer — right in your browser. Available through VaultBots." />
+  <meta property="og:url" content="https://luka.steadwell.cc/" />
+  <meta property="og:image" content="https://luka.steadwell.cc/og-luka.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Luka v. A2U — Steadwell Robotics interactive studio preview" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Meet Luka v. A2U · Talk, Move &amp; Explore Live" />
+  <meta name="twitter:description" content="Talk live with Luka, mirror arm &amp; finger movements via webcam, and explore full-body 3D motion in your browser." />
+  <meta name="twitter:image" content="https://luka.steadwell.cc/og-luka.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Steadwell Robotics Hub · Luka v. A2U",
+    "url": "https://luka.steadwell.cc/",
+    "applicationCategory": "RoboticsSimulation",
+    "operatingSystem": "Web Browser",
+    "description": "Interactive browser studios to talk with Luka v. A2U, mirror arm and finger movements via webcam, and explore full-body 3D kinematics.",
+    "image": "https://luka.steadwell.cc/og-luka.png",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Steadwell Robotics",
+      "url": "https://vaultbots.com"
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": "https://vaultbots.com",
+      "availability": "https://schema.org/InStock"
+    }
+  }
+  </script>
+
+  <link rel="stylesheet" href="./landing.css" />
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop-glow"></div>
+    <div class="backdrop-grid"></div>
   </div>
 
-  <header class="topbar">
-    <div class="brand">
-      <span class="mark"></span>
-      <div>
-        <strong>STEADWELL</strong>
-        <small>LUKA · A2 ULTRA TWIN COCKPIT</small>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="wrap topbar-inner">
+        <div class="brand-cluster">
+          <a class="brand" href="./" aria-label="Steadwell Robotics Home">
+            <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+            <span class="brand-text">
+              <strong>STEADWELL</strong>
+              <small>ROBOTICS HUB</small>
+            </span>
+          </a>
+
+          <div class="bot-switcher" id="botSwitcher">
+            <button type="button" class="bot-switcher-btn" id="botSwitcherBtn" aria-expanded="false" aria-controls="botSwitcherMenu" aria-label="Switch robot">
+              <i class="pulse-dot" data-state="online"></i>
+              <span>Luka · v. A2U</span>
+              <span class="switcher-caret" aria-hidden="true">▾</span>
+            </button>
+            <div class="bot-switcher-menu" id="botSwitcherMenu" hidden>
+              <div class="switcher-head">ROBOT FLEET</div>
+              <div id="botSwitcherList"></div>
+              <a href="https://vaultbots.com" target="_blank" rel="noopener" class="switcher-footer" data-track-link="vaultbots.com">
+                <span>Browse &amp; purchase on VaultBots</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <nav class="nav-links" aria-label="Primary navigation">
+          <a href="#reel">Reel</a>
+          <a href="#studios">Studios</a>
+          <a href="#fleet">Fleet</a>
+          <a href="#vita">VITA Edge</a>
+          <a href="./analytics.html">Analytics</a>
+        </nav>
+
+        <div class="top-right">
+          <a href="https://vaultbots.com" target="_blank" rel="noopener" class="nav-ext" data-track-link="vaultbots.com">
+            Buy Luka <span aria-hidden="true">↗</span>
+          </a>
+          <a href="./luka-sim.html" class="btn btn-primary btn-compact" data-track-link="Talk & Mirror Studio (Header)">
+            Launch <span class="arrow" aria-hidden="true">→</span>
+          </a>
+          <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mobileNav" aria-label="Open menu">
+            <span></span><span></span>
+          </button>
+        </div>
       </div>
-    </div>
-    <div class="topmeta">
-      <span><i id="linkDot" class="dot"></i>LINK</span>
-      <span><i id="deadmanDot" class="dot"></i>DEADMAN</span>
-      <span><i id="estopDot" class="dot"></i>STOP</span>
-      <span class="sep"></span>
-      <span id="envBadge" class="chip env" data-env="sim">SIM</span>
-      <span id="rendererKind" class="chip">…</span>
-      <span id="fps" class="chip">– fps</span>
-      <span id="tris" class="chip">– tris</span>
-    </div>
-  </header>
 
-  <main class="grid">
-    <aside class="rail left">
-      <section class="card">
-        <h2>Control authority</h2>
-        <div id="modeState" class="statemachine" data-state="MANUAL">MANUAL</div>
-        <p class="hint">Local preconditions, not a manufacturer arbitration mechanism.</p>
-        <div class="btncol">
-          <button id="btnArm" class="btn">ARM</button>
-          <button id="btnEngage" class="btn">ENGAGE COMPUTER</button>
-          <button id="btnHandoff" class="btn">SAFE HANDOFF</button>
+      <!-- Mobile & Tablet Responsive Drawer -->
+      <div class="mobile-nav" id="mobileNav" hidden>
+        <div class="wrap mobile-nav-inner">
+          <div class="mobile-nav-group">
+            <span class="mobile-nav-label">Navigate</span>
+            <a href="#reel" data-mobile-close>Live Hardware Reel</a>
+            <a href="#studios" data-mobile-close>Interactive Studios</a>
+            <a href="#fleet" data-mobile-close>Fleet Roster</a>
+            <a href="#vita" data-mobile-close>Steadwell VITA Companion</a>
+            <a href="#operations" data-mobile-close>On-Site Tools</a>
+            <a href="./analytics.html">Analytics</a>
+          </div>
+          <div class="mobile-nav-group">
+            <span class="mobile-nav-label">Active Robot · Luka v. A2U</span>
+            <a href="./luka-sim.html" class="btn btn-primary" data-track-link="Talk & Mirror Studio (Mobile)">
+              Talk &amp; Mirror Studio <span aria-hidden="true">→</span>
+            </a>
+            <a href="./cockpit.html" class="btn" data-track-link="Full-Body 3D Explorer (Mobile)">
+              Full-Body 3D Explorer <span aria-hidden="true">↗</span>
+            </a>
+            <a href="https://steadwell.solutions/products/vita-edge" target="_blank" rel="noopener" class="btn" data-track-link="Steadwell VITA Edge">
+              Steadwell VITA Hardware <span aria-hidden="true">↗</span>
+            </a>
+            <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn btn-cyan" data-track-link="vaultbots.com">
+              Purchase Luka on VaultBots <span aria-hidden="true">↗</span>
+            </a>
+          </div>
         </div>
-        <button id="btnEstop" class="btn estop">SOFTWARE STOP</button>
-        <p class="hint stopnote">Unverified — this does not reach the manufacturer's safety system. Use the factory e-stop.</p>
-        <button id="btnClear" class="btn ghost">clear e-stop</button>
-        <button id="deadman" class="btn deadman">HOLD DEADMAN <kbd>space</kbd></button>
-        <div class="meters">
-          <div><span>commands</span><b id="cmdCount">0</b></div>
-          <div><span>rejections</span><b id="rejCount">0</b></div>
-        </div>
-        <div id="watchdog" class="watchdog">watchdog idle</div>
-        <div id="lastReject" class="reject"></div>
-      </section>
-
-      <section class="card">
-        <h2>Luka link <span id="linkMode" class="tag" data-mode="offline">OFFLINE</span></h2>
-        <div id="linkBody" class="kvlist"><div class="kv"><span>endpoint</span><b>—</b></div></div>
-        <div class="btnrow">
-          <button id="btnLink" class="btn small">connect live</button>
-          <button id="btnMock" class="btn small ghost">mock</button>
-        </div>
-        <div class="field">
-          <label for="convention">joint convention</label>
-          <select id="convention">
-            <option value="raw">as reported</option>
-            <option value="flip2">flip joint 2</option>
-            <option value="flip2_5">flip joint 2 + 5</option>
-            <option value="offset2">joint 2 ∓90°</option>
-          </select>
-        </div>
-        <div class="btnrow">
-          <button id="btnReference" class="btn small">capture reference pose</button>
-          <button id="btnClearRef" class="btn small ghost">clear</button>
-        </div>
-        <p id="referenceNote" class="hint">With his arms hanging, capture a reference. The twin then mirrors movement *relative* to that pose instead of assuming the model's zero.</p>
-        <p id="conventionNote" class="hint">Measured angles may not share the model's sign convention. If the arms cross the body, pick a different convention.</p>
-        <p id="linkNote" class="hint">Read-only <code>McActionService/GetAction</code> at 0.2 Hz.</p>
-      </section>
-
-      <section class="card">
-        <h2>Joint calibration <span id="calState" class="tag">…</span></h2>
-        <p class="hint">The captured pose becomes the twin's neutral. Legs use absolute URDF angles; arms and head use offsets. If a joint moves the wrong way, flip its sign.</p>
-        <div class="btnrow">
-          <button id="btnCalCapture" class="btn small">capture current pose</button>
-          <button id="btnCalReset" class="btn small ghost">use shared</button>
-          <button id="btnCalDownload" class="btn small ghost">download</button>
-        </div>
-        <details id="calDetails">
-          <summary>joint offsets &amp; directions</summary>
-          <div id="calList" class="cal-list"></div>
-        </details>
-        <p id="calNote" class="hint"></p>
-        <div id="handReadout" class="handread"></div>
-      </section>
-
-      <section class="card grow">
-        <h2>Event log</h2>
-        <div id="logList" class="log"></div>
-      </section>
-    </aside>
-
-    <section class="viewport">
-      <canvas id="view"></canvas>
-      <div class="overlay tl">
-        <div class="tagline">LUKA TWIN</div>
-        <div class="tiny">estimated model · 47 meshes · FK checked against MuJoCo, not calibrated to Luka</div>
-        <div id="poseSource" class="tiny posesrc">pose source: playback / operator — no live joint feedback</div>
       </div>
-      <div class="overlay bl facts">
-        <div><span>dof</span><b id="dofRead">—</b></div>
-        <div><span>driven</span><b id="actRead">—</b></div>
-        <div><span>mass</span><b id="massRead">—</b></div>
-        <div><span>height</span><b id="heightRead">—</b></div>
-        <div><span>mesh</span><b id="triRead">—</b></div>
+    </header>
+
+    <main>
+      <!-- HERO -->
+      <section class="hero" id="heroSection" data-animation-active="true">
+        <div class="wrap hero-grid">
+          <div>
+            <div class="eyebrow">
+              <i id="suiteStatusDot" class="pulse-dot" data-state="sim"></i>
+              <span>LUKA · v. A2U</span>
+              <span class="eyebrow-sep">·</span>
+              <span id="suiteStatusText">LIVE IN BROWSER</span>
+            </div>
+            <h1 class="hero-title word-reveal" data-word-reveal>
+              Meet Luka.<br />
+              <span class="muted-line">Talk, move, and explore live.</span>
+            </h1>
+            <p class="hero-sub">
+              Try Luka right in your browser — speak with him, mirror your hand and arm movements
+              using your webcam, or inspect his full-body 3D motion. No setup required.
+            </p>
+            <div class="hero-actions">
+              <a href="./luka-sim.html" class="btn btn-primary" data-track-link="Talk & Mirror Studio (Hero)">
+                Start Talking &amp; Moving <span class="arrow" aria-hidden="true">→</span>
+              </a>
+              <a href="./cockpit.html" class="btn" data-track-link="Full-Body 3D Explorer (Hero)">
+                Full-Body Explorer <span class="arrow" aria-hidden="true">↗</span>
+              </a>
+            </div>
+            <div class="hero-metrics">
+              <div class="metric">
+                <b>Voice &amp; Chat</b>
+                <span>Hold to talk or type naturally</span>
+              </div>
+              <div class="metric">
+                <b>Webcam Mirror</b>
+                <span>Arms &amp; fingers follow you live</span>
+              </div>
+              <div class="metric">
+                <b>Safe by Design</b>
+                <span>Built-in hardware limits</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Tap-and-Hold Luka Obsidian Visor Medallion -->
+          <div class="visor-stage" id="visorStage" data-chat-phase="idle" data-mood="neutral" aria-label="Interactive Luka voice chat head">
+            <div class="visor-top">
+              <span class="visor-live-pill">
+                <i class="visor-state-dot" aria-hidden="true"></i>
+                <span id="heroChatStatus">HOLD HEAD TO CHAT</span>
+              </span>
+              <button type="button" class="visor-icon-btn" id="heroMuteBtn" aria-pressed="false" data-muted="false" title="Mute Luka voice" aria-label="Toggle Luka voice audio">
+                <svg class="icon-sound-on" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                </svg>
+                <svg class="icon-sound-off" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <line x1="23" y1="9" x2="17" y2="15" />
+                  <line x1="17" y1="9" x2="23" y2="15" />
+                </svg>
+              </button>
+            </div>
+
+            <button type="button" class="visor-orbit-wrap visor-trigger" id="lukaHeadTrigger" aria-pressed="false" aria-label="Press and hold Luka's head to talk">
+              <span class="sonar-ring r1" aria-hidden="true"></span>
+              <span class="sonar-ring r2" aria-hidden="true"></span>
+              <span class="orbit-ring outer" aria-hidden="true"></span>
+              <span class="orbit-ring mid" aria-hidden="true"><span class="orbit-node"></span></span>
+              <span class="orbit-ring inner" aria-hidden="true"></span>
+
+              <span class="luka-head-shell" id="lukaHeadShell">
+                <span class="luka-visor-glass">
+                  <span class="oled-eyes" id="oledEyes">
+                    <span class="oled-eye left"></span>
+                    <span class="oled-eye right"></span>
+                  </span>
+                  <span class="oled-wave" id="oledWave" aria-hidden="true">
+                    <i></i><i></i><i></i><i></i><i></i>
+                  </span>
+                </span>
+              </span>
+            </button>
+
+            <div class="hero-speech-bubble" aria-live="polite">
+              <span class="hero-bubble-user" id="heroBubbleUser" hidden></span>
+              <p class="hero-bubble-text" id="heroBubbleText">Hey! Hold my visor to talk — or tap a prompt below.</p>
+            </div>
+
+            <div class="hero-chat-controls">
+              <button type="button" class="hero-talk-btn" id="heroTalkBtn" data-phase="idle">
+                <span class="hero-talk-mic" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                </span>
+                <span id="heroTalkLabel">Hold to Talk</span>
+                <span class="hero-talk-hint">Hold or Tap</span>
+              </button>
+
+              <div class="hero-prompts" aria-label="Quick prompts for Luka">
+                <button type="button" class="hero-prompt-chip" data-hero-prompt="Hey Luka, say hi!">Say hi</button>
+                <button type="button" class="hero-prompt-chip" data-hero-prompt="Tell me a quick robot joke">Tell a joke</button>
+                <button type="button" class="hero-prompt-chip" data-hero-prompt="Tell me about pairing you with Steadwell VITA">About VITA</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 01: LUKA LIVE HARDWARE VIDEO REEL -->
+      <section class="section-band reel-section" id="reel">
+        <span class="corner-mark tl" aria-hidden="true"></span>
+        <span class="corner-mark tr" aria-hidden="true"></span>
+        <div class="wrap">
+          <div class="reel-grid">
+            <div class="reel-device-col">
+              <div class="reel-aura" aria-hidden="true"></div>
+              <div class="reel-frame" id="reelFrame" data-playing="false" data-muted="true">
+                <video
+                  id="lukaReelVideo"
+                  src="./media/luka-reel.mp4"
+                  poster="./media/luka-reel-poster.jpg"
+                  playsinline
+                  muted
+                  loop
+                  preload="metadata"
+                  aria-label="Luka v. A2U live hardware reel"
+                ></video>
+
+                <div class="reel-hud-top">
+                  <span class="reel-live-badge"><i aria-hidden="true"></i>REAL HARDWARE · A2U</span>
+                  <span class="reel-time-pill" id="reelTime">0:00 / 0:29</span>
+                </div>
+
+                <button type="button" class="reel-sound-cta" id="reelSoundCta" aria-label="Turn sound on for Luka video">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                  </svg>
+                  <span>Tap for Sound</span>
+                </button>
+
+                <div class="reel-controls">
+                  <button type="button" class="reel-ctrl-btn" id="reelPlayBtn" aria-label="Play or pause video">
+                    <svg class="icon-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4" /></svg>
+                    <svg class="icon-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+                  </button>
+
+                  <div class="reel-scrub" id="reelScrub" role="slider" tabindex="0" aria-label="Video timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div class="reel-scrub-track">
+                      <div class="reel-scrub-fill" id="reelProgressFill"></div>
+                    </div>
+                  </div>
+
+                  <button type="button" class="reel-ctrl-btn" id="reelMuteBtn" aria-label="Mute or unmute video">
+                    <svg class="icon-vol-on" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    </svg>
+                    <svg class="icon-vol-off" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                      <line x1="22" y1="9" x2="16" y2="15" />
+                      <line x1="16" y1="9" x2="22" y2="15" />
+                    </svg>
+                  </button>
+
+                  <button type="button" class="reel-ctrl-btn" id="reelFsBtn" aria-label="Fullscreen video">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="15 3 21 3 21 9" />
+                      <polyline points="9 21 3 21 3 15" />
+                      <line x1="21" y1="3" x2="14" y2="10" />
+                      <line x1="3" y1="21" x2="10" y2="14" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="reel-copy">
+              <span class="section-index">01 · LUKA IN THE REAL WORLD</span>
+              <h2 class="reel-title">
+                Out of the sim.<br />
+                <span class="muted-line">Into the room.</span>
+              </h2>
+              <p class="reel-desc">
+                Luka isn’t just a 3D concept. Watch full AgiBot A2 Ultra hardware greeting guests, turning heads in the showroom,
+                and walking the red carpet with his signature cyan OLED visor.
+              </p>
+
+              <div class="reel-chapters-head">JUMP TO A MOMENT</div>
+              <div class="reel-chapters" id="reelChapters">
+                <button type="button" class="reel-chapter is-active" data-seek="0" data-end="10">
+                  <span class="ch-time">0:00</span>
+                  <span class="ch-body">
+                    <strong>Showroom Entrance</strong>
+                    <small>Stepping out in full A2 Ultra hardware</small>
+                  </span>
+                  <span class="ch-play" aria-hidden="true">▶</span>
+                </button>
+                <button type="button" class="reel-chapter" data-seek="10" data-end="20">
+                  <span class="ch-time">0:10</span>
+                  <span class="ch-body">
+                    <strong>Crowd &amp; Floor Moments</strong>
+                    <small>Live handshakes &amp; guest reactions</small>
+                  </span>
+                  <span class="ch-play" aria-hidden="true">▶</span>
+                </button>
+                <button type="button" class="reel-chapter" data-seek="20" data-end="26">
+                  <span class="ch-time">0:20</span>
+                  <span class="ch-body">
+                    <strong>Showcase &amp; Wrist Detail</strong>
+                    <small>Articulated RH56 fingers &amp; watch fit</small>
+                  </span>
+                  <span class="ch-play" aria-hidden="true">▶</span>
+                </button>
+                <button type="button" class="reel-chapter" data-seek="26" data-end="30">
+                  <span class="ch-time">0:26</span>
+                  <span class="ch-body">
+                    <strong>Red Carpet Walk</strong>
+                    <small>Glowing cyan eyes under the lights</small>
+                  </span>
+                  <span class="ch-play" aria-hidden="true">▶</span>
+                </button>
+              </div>
+
+              <div class="reel-actions">
+                <a href="./luka-sim.html" class="btn btn-primary" data-track-link="Talk & Mirror Studio (Reel)">
+                  Try Talk &amp; Mirror Studio <span class="arrow" aria-hidden="true">→</span>
+                </a>
+                <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn" data-track-link="vaultbots.com">
+                  Own Luka at VaultBots <span class="arrow" aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 02: INTERACTIVE STUDIOS FOR ACTIVE BOT -->
+      <section class="section-band apps-section" id="studios">
+        <span class="corner-mark tl" aria-hidden="true"></span>
+        <span class="corner-mark tr" aria-hidden="true"></span>
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <span class="section-index">02 · LUKA v. A2U · WORKS IN ANY BROWSER</span>
+              <h2>Interactive Studios</h2>
+            </div>
+            <p class="section-note">Choose an experience below — no downloads, accounts, or physical robot required.</p>
+          </div>
+
+          <div class="featured-grid">
+            <a class="app-card featured primary-accent reveal-card" href="./luka-sim.html" data-app-index="1" style="--card-i:0">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="4" y="4" width="16" height="10" rx="4" />
+                      <circle cx="9.5" cy="9" r="1.2" fill="currentColor" stroke="none" />
+                      <circle cx="14.5" cy="9" r="1.2" fill="currentColor" stroke="none" />
+                      <path d="M8 20v-3a4 4 0 0 1 8 0v3" />
+                    </svg>
+                  </span>
+                  <span class="card-num">01 · START HERE</span>
+                </div>
+                <span class="status-tag" data-status="ready"><i></i><span>READY</span></span>
+              </div>
+
+              <div class="card-body">
+                <h3>Talk &amp; Mirror Studio</h3>
+                <p>
+                  Have a live conversation with Luka, try expressive hand and head gestures, teach new poses,
+                  or turn on your webcam so his arms and fingers mirror yours smoothly.
+                </p>
+                <div class="tag-row">
+                  <span class="micro-tag">Voice &amp; Chat</span>
+                  <span class="micro-tag">Webcam Mirror</span>
+                  <span class="micro-tag">Hand Gestures</span>
+                  <span class="micro-tag">Memory</span>
+                </div>
+              </div>
+
+              <div class="card-foot">
+                <span>Recommended first experience</span>
+                <span class="card-launch">Start Studio <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+
+            <a class="app-card featured reveal-card" href="./cockpit.html" data-app-index="2" style="--card-i:1">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="5" r="2.5" />
+                      <path d="M12 7.5v6.5" />
+                      <path d="M7 10.5h10" />
+                      <path d="M12 14l-3.5 6.5" />
+                      <path d="M12 14l3.5 6.5" />
+                    </svg>
+                  </span>
+                  <span class="card-num">02</span>
+                </div>
+                <span class="status-tag" data-status="ready"><i></i><span>READY</span></span>
+              </div>
+
+              <div class="card-body">
+                <h3>Full-Body 3D Explorer</h3>
+                <p>
+                  Inspect Luka from head to toe in 3D, replay real recorded movements, test individual joint controls,
+                  and orbit freely around the full humanoid model.
+                </p>
+                <div class="tag-row">
+                  <span class="micro-tag">Full-Body 3D</span>
+                  <span class="micro-tag">Motion Replays</span>
+                  <span class="micro-tag">Joint Controls</span>
+                  <span class="micro-tag">Live Status</span>
+                </div>
+              </div>
+
+              <div class="card-foot">
+                <span>Full humanoid view</span>
+                <span class="card-launch">Open Explorer <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 03: ROBOT FLEET & VAULTBOTS PURCHASE -->
+      <section class="section-band apps-section" id="fleet">
+        <span class="corner-mark tl" aria-hidden="true"></span>
+        <span class="corner-mark tr" aria-hidden="true"></span>
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <span class="section-index">03 · ROBOT FLEET &amp; AVAILABILITY</span>
+              <h2>Our Growing Lineup</h2>
+            </div>
+            <p class="section-note">New robots are joining the hub soon. Visit VaultBots to own Luka or reserve upcoming models.</p>
+          </div>
+
+          <div class="fleet-grid" id="fleetGrid">
+            <!-- Rendered from src/fleet.js + static fallback for no-JS -->
+            <article class="fleet-card active-bot reveal-card" style="--card-i:0">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-num">HUMANOID · v. A2U</span>
+                </div>
+                <span class="status-tag" data-status="online"><i></i><span>LIVE NOW</span></span>
+              </div>
+              <div class="card-body">
+                <h3>Luka</h3>
+                <p>Voice conversation, webcam hand &amp; arm mirroring, and full-body 3D motion explorer.</p>
+              </div>
+              <div class="fleet-actions">
+                <a href="./luka-sim.html" class="btn btn-primary btn-compact" data-track-link="Fleet Card: Luka Studio">Open Studio →</a>
+                <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn btn-compact" data-track-link="vaultbots.com">Buy at VaultBots ↗</a>
+              </div>
+            </article>
+
+            <article class="fleet-card upcoming-bot reveal-card" style="--card-i:1">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-num">FLEET EXPANSION</span>
+                </div>
+                <span class="status-tag"><i></i><span>COMING SOON</span></span>
+              </div>
+              <div class="card-body">
+                <h3>More Robots Arriving Soon</h3>
+                <p>
+                  This hub is built for our expanding fleet of embodied robots — each with its own live simulator,
+                  voice studio, and direct availability through VaultBots.
+                </p>
+              </div>
+              <div class="fleet-actions">
+                <a href="https://vaultbots.com" target="_blank" rel="noopener" class="btn btn-cyan btn-compact" data-track-link="vaultbots.com">
+                  Explore &amp; Purchase on vaultbots.com ↗
+                </a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 04: STEADWELL VITA EDGE COMPANION HARDWARE -->
+      <section class="section-band apps-section" id="vita">
+        <span class="corner-mark tl" aria-hidden="true"></span>
+        <span class="corner-mark tr" aria-hidden="true"></span>
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <span class="section-index">04 · OFFLINE-FIRST EDGE COMPANION</span>
+              <h2>Pair Luka with Steadwell VITA</h2>
+            </div>
+            <p class="section-note">
+              Frontier-class performance at the edge — the private workhorse companion that powers local voice, vision, and Trellis memory with zero cloud lag.
+            </p>
+          </div>
+
+          <div class="featured-grid">
+            <a class="app-card featured primary-accent reveal-card" href="https://steadwell.solutions/products/vita-edge" target="_blank" rel="noopener" data-track-link="Steadwell VITA Edge" style="--card-i:0">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                      <line x1="7" y1="9" x2="11" y2="9" />
+                      <circle cx="16.5" cy="9" r="1" fill="currentColor" stroke="none" />
+                      <line x1="7" y1="15" x2="17" y2="15" />
+                    </svg>
+                  </span>
+                  <span class="card-num">EDGE WORKHORSE</span>
+                </div>
+                <span class="status-tag" data-status="ready"><i></i><span>FROM $2,499</span></span>
+              </div>
+
+              <div class="card-body">
+                <h3>Steadwell VITA Edge</h3>
+                <p>
+                  Compact offline-first robotics companion built to sit right beside Luka — running private Trellis memory,
+                  local speech, and responsive low-latency automation over 10GbE and Wi-Fi 7.
+                </p>
+                <div class="tag-row">
+                  <span class="micro-tag">128GB DDR5</span>
+                  <span class="micro-tag">Intel Ultra 9 · 50 TOPS</span>
+                  <span class="micro-tag">10GbE + Dual 10G SFP+</span>
+                  <span class="micro-tag">4TB NVMe</span>
+                </div>
+              </div>
+
+              <div class="card-foot">
+                <span>steadwell.solutions/products/vita-edge</span>
+                <span class="card-launch">Explore VITA Edge <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+
+            <a class="app-card featured reveal-card" href="https://steadwell.solutions/products/vita-studio" target="_blank" rel="noopener" data-track-link="Steadwell VITA Studio" style="--card-i:1">
+              <div class="card-top">
+                <div class="card-id">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="4" y="4" width="16" height="16" rx="2" />
+                      <rect x="9" y="9" width="6" height="6" />
+                      <line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" />
+                      <line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" />
+                      <line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" />
+                      <line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" />
+                    </svg>
+                  </span>
+                  <span class="card-num">FRONTIER WORKSTATION</span>
+                </div>
+                <span class="status-tag" data-status="ready"><i></i><span>FROM $4,199</span></span>
+              </div>
+
+              <div class="card-body">
+                <h3>Steadwell VITA Studio</h3>
+                <p>
+                  Maximum local headroom for multimodal models, vision tracking, and custom robotics skills — pairing 128GB
+                  unified memory with optional dedicated NVIDIA GPU acceleration via OCuLink.
+                </p>
+                <div class="tag-row">
+                  <span class="micro-tag">128GB Unified Memory</span>
+                  <span class="micro-tag">Ryzen AI Max+ 395</span>
+                  <span class="micro-tag">OCuLink GPU</span>
+                  <span class="micro-tag">4TB NVMe</span>
+                </div>
+              </div>
+
+              <div class="card-foot">
+                <span>steadwell.solutions/products/vita-studio</span>
+                <span class="card-launch">Explore VITA Studio <span class="arrow" aria-hidden="true">↗</span></span>
+              </div>
+            </a>
+          </div>
+
+          <div class="vita-strip">
+            <span class="vita-strip-copy">
+              <strong>Offline-first stack preinstalled:</strong> Trellis memory · CoRa voice · Keystone security · Steadwell Mesh
+            </span>
+            <div class="vita-strip-links">
+              <a href="https://steadwell.solutions/products/vita-compute-dock" target="_blank" rel="noopener" data-track-link="Steadwell VITA Compute Dock">VITA Compute Dock ($699+) ↗</a>
+              <a href="https://steadwell.solutions/robotics" target="_blank" rel="noopener" data-track-link="Steadwell Open Robotics">Steadwell Robotics ↗</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 05: ON-SITE ROBOT TOOLS (EXPANDED LOCALLY, COLLAPSED ON PUBLIC WEB) -->
+      <section class="section-band apps-section" id="operations">
+        <span class="corner-mark tl" aria-hidden="true"></span>
+        <span class="corner-mark tr" aria-hidden="true"></span>
+        <div class="wrap">
+          <details class="ops-drawer" id="opsDrawer" open>
+            <summary>
+              <div>
+                <span class="section-index">05 · ON-SITE OPERATOR CONSOLES</span>
+                <h2>Local Robot Tools</h2>
+              </div>
+              <span class="drawer-pill" id="opsDrawerLabel">
+                <span id="opsDrawerHint">Local Wi-Fi · 6 consoles</span>
+                <span class="drawer-chevron" aria-hidden="true">▾</span>
+              </span>
+            </summary>
+
+            <div class="ops-grid">
+              <a class="app-card reveal-card" href="http://127.0.0.1:8788/" data-service="gateway" data-path="/" data-app-index="3" style="--card-i:0">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                    </span>
+                    <span class="card-num">03</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="gateway"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>Robot Control Hub</h3>
+                  <p>Safety permissions, live robot health, emergency software stop, and activity history.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8788/</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+
+              <a class="app-card reveal-card" href="http://127.0.0.1:8791/chat" data-service="bridge" data-path="/chat" data-app-index="4" style="--card-i:1">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                    </span>
+                    <span class="card-num">04</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="bridge"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>LukaChat</h3>
+                  <p>Simple live voice conversation screen with game controller support and gentle head movement.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8791/chat</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+
+              <a class="app-card reveal-card" href="http://127.0.0.1:8788/voice.html" data-service="gateway" data-path="/voice.html" data-app-index="5" style="--card-i:2">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="22" />
+                      </svg>
+                    </span>
+                    <span class="card-num">05</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="gateway"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>Voice Console</h3>
+                  <p>Test push-to-talk speech recognition, voice readiness, and live conversation timing.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8788/voice.html</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+
+              <a class="app-card reveal-card" href="http://127.0.0.1:8791/" data-service="bridge" data-path="/" data-app-index="6" style="--card-i:3">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 12h3l2-6 4 12 3-8 2 2h6" />
+                      </svg>
+                    </span>
+                    <span class="card-num">06</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="bridge"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>Audio &amp; Transcript</h3>
+                  <p>Hear Luka’s live audio, read real-time transcripts, pick voices, and nudge his head.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8791/</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+
+              <a class="app-card reveal-card" href="http://127.0.0.1:8788/lidar.html" data-service="gateway" data-path="/lidar.html" data-app-index="7" style="--card-i:4">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <circle cx="12" cy="12" r="4.5" />
+                        <line x1="12" y1="3" x2="12" y2="12" />
+                      </svg>
+                    </span>
+                    <span class="card-num">07</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="gateway"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>3D Room Scan (LiDAR)</h3>
+                  <p>Live 3D spatial view showing how Luka maps the room around him.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8788/lidar.html</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+
+              <a class="app-card reveal-card" href="http://127.0.0.1:8788/room.html" data-service="gateway" data-path="/room.html" data-app-index="8" style="--card-i:5">
+                <div class="card-top">
+                  <div class="card-id">
+                    <span class="card-icon" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+                        <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                        <circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none" />
+                      </svg>
+                    </span>
+                    <span class="card-num">08</span>
+                  </div>
+                  <span class="status-tag" data-service-badge="gateway"><i></i><span>LOCAL</span></span>
+                </div>
+                <div class="card-body">
+                  <h3>Room Sensors</h3>
+                  <p>Room sound levels and camera presence indicators from the local workstation.</p>
+                </div>
+                <div class="card-foot">
+                  <span data-endpoint>:8788/room.html</span>
+                  <span class="card-launch">Open <span class="arrow" aria-hidden="true">↗</span></span>
+                </div>
+              </a>
+            </div>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span class="corner-mark tl" aria-hidden="true"></span>
+      <span class="corner-mark tr" aria-hidden="true"></span>
+      <div class="wrap footer-inner">
+        <div class="footer-left">
+          <span>STEADWELL ROBOTICS</span>
+          <span>·</span>
+          <a href="https://vaultbots.com" target="_blank" rel="noopener" style="color:var(--cyan)" data-track-link="vaultbots.com">Buy Luka at vaultbots.com ↗</a>
+          <span>·</span>
+          <a href="https://steadwell.solutions/products/vita-edge" target="_blank" rel="noopener" data-track-link="Steadwell VITA Edge">Steadwell VITA ↗</a>
+        </div>
+        <div class="footer-links">
+          <a href="#reel">Reel</a>
+          <a href="#studios">Studios</a>
+          <a href="#fleet">Fleet</a>
+          <a href="#vita">VITA</a>
+          <a href="./analytics.html">Analytics</a>
+          <span class="footer-keys">Keys <kbd>1</kbd>–<kbd>8</kbd></span>
+        </div>
       </div>
-      <div class="overlay br keys">
-        <span>drag / wheel: orbit</span>
-        <span><kbd>space</kbd> deadman</span>
-        <span><kbd>esc</kbd> e-stop</span>
-      </div>
-    </section>
+    </footer>
+  </div>
 
-    <aside class="rail right">
-      <section class="card">
-        <h2>Luka playback <span class="muted tiny">recorded</span></h2>
-        <div class="field">
-          <label for="recSelect">recording</label>
-          <select id="recSelect"></select>
-        </div>
-        <div class="btnrow">
-          <button id="btnPlay" class="btn small">play</button>
-          <select id="speedSelect" class="inline">
-            <option value="0.25">0.25×</option>
-            <option value="0.5">0.5×</option>
-            <option value="1" selected>1×</option>
-            <option value="2">2×</option>
-          </select>
-        </div>
-        <input id="scrub" type="range" min="0" max="1" step="0.0001" value="0" class="scrub">
-        <div id="timeRead" class="mono tiny">—</div>
-        <div id="recMeta" class="tiny muted">—</div>
-        <p class="hint">Joint positions only, from the paired iPad app. Units and frames not independently verified.</p>
-      </section>
-
-      <section class="card">
-        <h2>Test profile <span id="profileState" class="tag" data-mode="offline">UNATTESTED</span></h2>
-        <label class="check"><input type="checkbox" id="attestRig">
-          suspension load-rated · workspace clear · factory e-stop in hand</label>
-        <div class="field">
-          <label for="feetState">feet</label>
-          <select id="feetState">
-            <option value="unknown">unknown</option>
-            <option value="clear">clear of floor</option>
-            <option value="touching">touching floor</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="excursion">excursion cap</label>
-          <select id="excursion">
-            <option value="5">±5°</option>
-            <option value="10" selected>±10°</option>
-            <option value="20">±20°</option>
-          </select>
-        </div>
-        <div class="field"><label>locomotion</label><b id="locoState" class="mono tiny">locked</b></div>
-        <div id="profileNote" class="hint">Arm commands stay refused until this is attested. Locomotion commands do not exist in this build.</div>
-      </section>
-
-      <section class="card">
-        <h2>Arm control <span id="armMode" class="tag" data-mode="offline">DRY RUN</span></h2>
-        <div class="btnrow">
-          <button class="btn small active" data-side="left">left</button>
-          <button class="btn small" data-side="right">right</button>
-          <button id="armZero" class="btn small ghost">zero</button>
-        </div>
-        <div id="armGate" class="armgate">transport not configured</div>
-        <div id="armList" class="armlist"></div>
-        <div id="armPayload" class="tiny mono payload">no command sent</div>
-        <p class="hint">Values are <b>commanded</b>, not measured. Luka exposes no joint feedback on this interface, so there is nothing to compare against yet.</p>
-      </section>
-
-      <section class="card">
-        <h2>Pose presets</h2>
-        <div class="presets">
-          <button class="btn small" data-preset="stand">stand</button>
-          <button class="btn small" data-preset="guard">guard</button>
-          <button class="btn small" data-preset="reach">reach</button>
-          <button class="btn small" data-preset="inspect">inspect</button>
-        </div>
-      </section>
-
-      <section class="card grow">
-        <h2>Joints <span class="muted tiny">deg</span></h2>
-        <div id="joints" class="joints"></div>
-      </section>
-
-      <section class="card">
-        <h2>Provenance</h2>
-        <p id="provenance" class="hint"></p>
-      </section>
-    </aside>
-  </main>
-
-  <script type="module" src="./src/main.js"></script>
+  <script type="module" src="./src/landing.js"></script>
 </body>
 </html>

@@ -138,7 +138,7 @@ test('an invalid payload is 422 with per-field errors', async (t) => {
   assert.equal(res.body.error.code, 'invalid_payload');
   const field = res.body.error.details.errors.find((e) => e.path === '$.yaw');
   assert.equal(field.keyword, 'maximum');
-  assert.equal(field.bound, 2.2);
+  assert.equal(field.bound, 0.785);
 });
 
 test('a read-only capability is 405', async (t) => {

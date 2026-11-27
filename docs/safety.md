@@ -65,9 +65,10 @@ nothing more:
   pose. A frozen pose that still says LIVE would be worse than no pose at all.
 - Seeing the arms move in the twin is not evidence that anything we did caused it. Right now
   the controller is the only thing moving him.
-- The finger boxes are **synthetic geometry** standing in for a hand the model does not
-  contain. Their curl is a plausible reading of a 0–2000 sensor channel, not a calibration,
-  and finger telemetry is display-only.
+- The hand is a **mounted approximation**: an MIT Inspire RH56DFX model scaled to Luka's
+  hand envelope, driven by the six `GetHandState` channels. Its geometry is not Luka's CAD
+  and its scale/mount are estimates. Finger telemetry remains display-only and never feeds
+  back to the robot. `HAND=0` rebuilds the old synthetic-box fallback.
 
 ## Joint limits are three layers deep
 

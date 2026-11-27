@@ -1,0 +1,19 @@
+  .head-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 330px); gap: 24px; align-items: center; }
+  .head-info { display: grid; gap: 14px; }
+  .head-angles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; }
+  .head-angles div { padding: 12px; border: 1px solid #22343f; border-radius: 8px; background: #0c1217; }
+  .head-angles dt { color: #91a5b2; font-size: 11px; }
+  .head-angles dd { margin: 4px 0 0; font-size: 24px; font-variant-numeric: tabular-nums; color: #d7e3e9; }
+  .head-angles small { display: block; margin-top: 4px; font-size: 11px; color: #91a5b2; }
+  .head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .head-actions button { min-height: 44px; }
+  .head-pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 330px; margin: 0 auto; }
+  .head-pad button { min-height: 76px; padding: 8px; font-size: 14px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  .head-pad button span { display: block; margin-bottom: 4px; font-size: 24px; line-height: 1; }
+  .head-pad button:focus-visible { outline: 2px solid #a2edda; outline-offset: 3px; }
+  .head-pad button:disabled { opacity: .35; cursor: default; }
+  .head-error { color: #ffb3a5; font-size: 13px; margin: 0; }
+  .head-error[hidden] { display: none; }
+  #headOwner[data-state="active"] { color: #a2edda; border-color: #416f64; }
+  #headOwner[data-state="down"] { color: #ffb3a5; }
+  @media (max-width: 680px) { .head-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; } }

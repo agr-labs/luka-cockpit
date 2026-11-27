@@ -53,16 +53,18 @@ export const WRIST_ENVELOPE = {
   idx26_right_arm_joint7: [-0.20, 0.20],
 };
 
-// Model limits for head joints (URDF), used when no adapter is more specific.
+// Vendor neck command limits (AimDK A2 guide §7.1.5–6), narrower than the
+// visualization model's travel. The installed SDK's neck.py documents the same
+// range. A model's larger range must never widen the command contract.
 export const HEAD_LIMITS = {
-  joint1: [-2.20, 2.20], // pan / shake
-  joint2: [-0.50, 0.50], // tilt / nod
+  joint1: [-0.785, 0.785], // pan / shake
+  joint2: [-0.401, 0.401], // tilt / nod
 };
 
 export const LIMIT_SOURCES = {
   arm: 'vendor guide §7.1.9 hard limit',
   wrist: 'vendor recommended wrist envelope',
-  head: 'URDF model limit',
+  head: 'vendor guide §7.1.5–6 neck command limit',
   base: 'cockpit velocity clamp (vx 0.35, vy 0.25, wz 0.60)',
 };
 

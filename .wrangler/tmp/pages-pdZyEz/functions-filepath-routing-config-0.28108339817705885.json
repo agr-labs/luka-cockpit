@@ -1,0 +1,53 @@
+{
+  "routes": [
+    {
+      "routePath": "/api/metrics/export",
+      "mountPath": "/api/metrics",
+      "method": "GET",
+      "module": [
+        "api/metrics/export.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/metrics/export",
+      "mountPath": "/api/metrics",
+      "method": "OPTIONS",
+      "module": [
+        "api/metrics/export.js:onRequestOptions"
+      ]
+    },
+    {
+      "routePath": "/api/metrics/summary",
+      "mountPath": "/api/metrics",
+      "method": "GET",
+      "module": [
+        "api/metrics/summary.js:onRequestGet"
+      ]
+    },
+    {
+      "routePath": "/api/metrics/summary",
+      "mountPath": "/api/metrics",
+      "method": "OPTIONS",
+      "module": [
+        "api/metrics/summary.js:onRequestOptions"
+      ]
+    },
+    {
+      "routePath": "/api/metrics",
+      "mountPath": "/api",
+      "method": "OPTIONS",
+      "module": [
+        "api/metrics.js:onRequestOptions"
+      ]
+    },
+    {
+      "routePath": "/api/metrics",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/metrics.js:onRequestPost"
+      ]
+    }
+  ],
+  "baseURL": "/"
+}

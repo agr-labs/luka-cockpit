@@ -1,0 +1,26 @@
+<section class="card" id="head-controls" aria-labelledby="headTitle">
+    <div class="card-head"><h2 id="headTitle">Head movement</h2><span class="chip" id="headOwner" data-state="down">connecting…</span></div>
+    <div class="head-layout">
+      <div class="head-info">
+        <dl class="head-angles">
+          <div><dt>Pan · left / right</dt><dd id="headYaw">—</dd><small>Target <span id="headTargetYaw">—</span></small></div>
+          <div><dt>Tilt · up / down</dt><dd id="headPitch">—</dd><small>Target <span id="headTargetPitch">—</span></small></div>
+        </dl>
+        <div class="head-actions">
+          <button id="headEnable" class="small" type="button" disabled>Enable head controls</button>
+          <button id="headRelease" class="small ghost" type="button" disabled>Release controls</button>
+        </div>
+        <p class="audio-note" style="margin:0">Tap for a 2° move. Travel from the starting pose is limited to ±10° pan and ±5° tilt. Return to start restores the pose captured when you enabled controls.</p>
+        <p id="headMessage" class="audio-note" role="status" aria-live="polite" style="margin:0">Connecting to Luka’s head feedback…</p>
+        <p id="headError" class="head-error" role="alert" hidden></p>
+        <span id="headFreshness" class="muted" style="font-size:11px">waiting for angles</span>
+      </div>
+      <div class="head-pad" role="group" aria-label="Head movement controls">
+        <div></div><button type="button" data-head-jog="up" disabled><span aria-hidden="true">↑</span>Look up</button><div></div>
+        <button type="button" data-head-jog="left" disabled><span aria-hidden="true">←</span>Look left</button>
+        <button type="button" id="headHome" class="ghost" disabled><span aria-hidden="true">⌂</span>Return to start</button>
+        <button type="button" data-head-jog="right" disabled><span aria-hidden="true">→</span>Look right</button>
+        <div></div><button type="button" data-head-jog="down" disabled><span aria-hidden="true">↓</span>Look down</button><div></div>
+      </div>
+    </div>
+  </section>

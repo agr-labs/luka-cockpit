@@ -277,7 +277,7 @@ body[data-env="sim"] .btn:disabled { opacity: .22; }
 }
 .cal-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px 44px 24px 24px;
+  grid-template-columns: minmax(0, 1fr) 38px 38px 44px 22px 22px;
   gap: 4px;
   align-items: center;
   padding: 1px 0;
@@ -288,6 +288,21 @@ body[data-env="sim"] .btn:disabled { opacity: .22; }
 .cal-row .n { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal-row .v { text-align: right; }
 .cal-row button { min-height: 18px; padding: 0 4px; font-size: 10px; line-height: 1; }
+.twistrow { display: grid; gap: 4px; margin: 6px 0; }
+.twistrow label { display: grid; grid-template-columns: 1fr 82px 32px; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.twistrow input[type="range"] { width: 100%; }
+.twistrow output { font-variant-numeric: tabular-nums; text-align: right; }
+.cal-row.pinned .applied { color: #ffb020; font-weight: 600; }
+.cal-row input[type="number"] {
+  width: 42px;
+  min-height: 18px;
+  padding: 0 2px;
+  font-size: 10px;
+  text-align: right;
+  background: #0d1116;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
 .cal-row button.neg { color: var(--bad); }
 
 .handread {

@@ -1,0 +1,9 @@
+{
+  "id": "luka-ashley-v1",
+  "provider": "inworld",
+  "model": "inworld-tts-2",
+  "voice": "Ashley",
+  "rate": 0.90,
+  "pitch": -2,
+  "pitchUnit": "semitones"
+}

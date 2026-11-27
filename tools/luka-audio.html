@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c0f">
+<title>Luka Audio + Transcript</title>
+<link rel="stylesheet" href="/console.css">
+<link rel="stylesheet" href="/head-controls.css">
+<style>
+  main.audio-wrap {
+    display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: none; gap: 14px;
+    max-width: 1160px; margin: 0 auto; padding: 18px; align-items: start;
+  }
+  .audio-top { display: grid; gap: 10px; }
+  main.audio-wrap > * { min-width: 0; }
+  #head-controls { scroll-margin-top: 90px; }
+  .audio-status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .audio-status .chip { font-variant-numeric: tabular-nums; }
+  .audio-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  @media (min-width: 900px) { .audio-grid { grid-template-columns: 1fr 1fr; } }
+  .audio-card { display: grid; gap: 10px; }
+  .audio-card audio { width: 100%; min-height: 40px; }
+  .sayrow { display: grid; grid-template-columns: minmax(145px, .8fr) minmax(190px, 1.1fr) minmax(240px, 2fr) auto; gap: 8px; align-items: center; }
+  .sayrow select, .sayrow input { min-height: 40px; font-size: 16px; min-width: 0; }
+  .say-tuning { display: grid; grid-template-columns: minmax(170px, 1fr) minmax(170px, 1fr) minmax(220px, 1.2fr); gap: 12px; align-items: end; }
+  .say-tuning label { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; color: #9aabb6; font-size: 11px; }
+  .say-tuning input[type="range"] { grid-column: 1 / -1; width: 100%; min-height: 20px; margin: 0; accent-color: #79c8b5; }
+  .say-tuning output { color: #d7e3e9; font-variant-numeric: tabular-nums; }
+  @media (max-width: 900px) { .sayrow { grid-template-columns: 1fr 1fr; } .sayrow input { grid-column: 1 / -1; } .sayrow button { min-height: 40px; } .say-tuning { grid-template-columns: 1fr 1fr; } .say-tuning .audio-note { grid-column: 1 / -1; } }
+  @media (max-width: 560px) { .sayrow, .say-tuning { grid-template-columns: 1fr; } .sayrow input, .say-tuning .audio-note { grid-column: auto; } .sayrow button { width: 100%; } }
+  .audio-note { font-size: 11px; color: #7f95a5; line-height: 1.5; }
+  .turns { display: grid; gap: 6px; max-height: 420px; overflow: auto; font-size: 13px; }
+  .turn { padding: 8px 10px; border: 1px solid #1a262f; border-radius: 6px; background: #0c1217; overflow-wrap: anywhere; }
+  .turn time { color: #6d8191; font-size: 10px; margin-right: 6px; font-variant-numeric: tabular-nums; }
+  .turn.asr b { color: #ffcf8a; }
+  .turn.tts b { color: #9fd7c8; }
+  .turn b { font-weight: 600; margin-right: 4px; }
+  .empty { color: #6d8191; font-size: 12px; }
+  @media (max-width: 620px) { main.audio-wrap { padding: 10px; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="dot" id="bridgeDot" data-state="down"></span>
+    <strong>Luka Audio + Transcript</strong>
+    <span class="tag">agent tap</span>
+  </div>
+  <div class="top-right">
+    <a class="tag" id="gwLink" href="http://127.0.0.1:8788/">gateway console</a>
+    <a class="tag" id="voiceLink" href="http://127.0.0.1:8788/voice.html">voice</a>
+    <a class="tag" href="#head-controls">head controls</a>
+    <a class="tag" href="/chat">LukaChat</a>
+    <a class="tag" href="http://127.0.0.1:8787/">twin</a>
+  </div>
+</header>
+
+<main class="audio-wrap">
+  <section class="card audio-top">
+    <div class="audio-status">
+      <span class="chip" id="connChip">bridge: connecting…</span>
+      <span class="chip" id="countChip">0 heard · 0 spoken</span>
+      <span class="chip" id="robotAudio" title="the head speaker is a vendor/BT path, not an ALSA capture">head audio: vendor tap</span>
+      <span class="muted" style="font-size:11px">source: /agibot/log/agent/agent.log over SSH · updates live</span>
+    </div>
+    <div class="audio-card">
+      <div class="card-head"><h2>Luka speaker output</h2><span class="muted" style="font-size:11px">card 0 loopback</span></div>
+      <audio id="lukaAudio" controls preload="none"></audio>
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="btnAudio" class="small" type="button">connect loopback</button>
+        <button id="btnTone" class="small ghost" type="button">test tone</button>
+        <span id="audioState" class="muted" style="font-size:12px">not connected</span>
+      </div>
+      <p class="audio-note"><b>The head speaker is not exposed as an ALSA capture.</b> You can hear Luka, but its audio is a vendor/BT path: the AIUI USB module is capture-only, bluealsa has no PCM objects, the DSPK1 speaker mux is None/0 channels, and Luka’s agent holds the only loopback duplicate (<code>loop_in</code> is busy). This player therefore streams the card-0 loopback, which is silent for the head speaker. Use <b>test tone</b> to verify the browser’s audio independently. The transcript cards are unaffected. Microphone input is also held exclusively by the agent, so it is transcribed from ASR.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Speak as Luka</h2><span class="muted" style="font-size:11px">custom voice · PlayMediaFile</span></div>
+    <div class="sayrow">
+      <select id="sayProvider" aria-label="speech provider">
+        <option value="inworld">Inworld</option>
+        <option value="say">macOS system</option>
+      </select>
+      <select id="sayVoice" aria-label="voice"></select>
+      <input id="sayText" type="text" placeholder="Type something for Luka to say…" autocomplete="off" enterkeyhint="send">
+      <button id="btnSay" class="small" type="button">speak</button>
+    </div>
+    <div class="say-tuning">
+      <label>Speaking rate <output id="sayRateValue">0.75×</output>
+        <input id="sayRate" type="range" min="0.5" max="1.5" step="0.05" value="0.75" aria-label="speaking rate">
+      </label>
+      <label>Pitch shift <output id="sayPitchValue">−2 semitones</output>
+        <input id="sayPitch" type="range" min="-12" max="6" step="1" value="-2" aria-label="pitch shift in semitones">
+      </label>
+      <label class="say-local"><input id="sayLocal" type="checkbox" checked> play on this Mac</label>
+      <p id="sayState" class="audio-note">Inworld applies pitch in semitones at synthesis time; rate is 0.5–1.5×.</p>
+    </div>
+  </section>
+
+  <div id="headMount"></div>
+
+  <div class="audio-grid">
+    <section class="card">
+      <div class="card-head"><h2>Heard by Luka</h2><span class="muted" style="font-size:11px">ASR · user speech</span></div>
+      <div id="asr" class="turns"><div class="empty">waiting for speech…</div></div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Spoken by Luka</h2><span class="muted" style="font-size:11px">TTS · response</span></div>
+      <div id="tts" class="turns"><div class="empty">waiting for speech…</div></div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const base = '';
+const turns = { asr: [], tts: [] };
+const voiceSelection = new Map();
+
+function render(kind) {
+  const host = $(kind);
+  const rows = turns[kind];
+  host.innerHTML = rows.length
+    ? rows.slice(-120).map((t) => `<div class="turn ${kind}"><time>${new Date(t.at).toLocaleTimeString()}</time><b>${kind === 'asr' ? 'You' : 'Luka'}</b>${escapeHtml(t.text)}</div>`).join('')
+    : '<div class="empty">waiting for speech…</div>';
+  host.scrollTop = host.scrollHeight;
+  $('countChip').textContent = `${turns.asr.length} heard · ${turns.tts.length} spoken`;
+}
+function escapeHtml(s) { return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function push(kind, item, replace = false) {
+  const last = turns[kind].at(-1);
+  if (replace && last) last.text = item.text;
+  else turns[kind].push(item);
+  render(kind);
+}
+
+async function load() {
+  try {
+    const res = await fetch(`${base}/transcript`, { cache: 'no-store' });
+    const data = await res.json();
+    turns.asr = data.asr || []; turns.tts = data.tts || [];
+    $('connChip').textContent = data.connected ? 'bridge: connected' : 'bridge: ssh down';
+    $('bridgeDot').dataset.state = data.connected ? 'up' : 'down';
+    render('asr'); render('tts');
+  } catch (e) {
+    $('connChip').textContent = 'bridge: unavailable';
+    $('bridgeDot').dataset.state = 'down';
+  }
+}
+
+function connectSse() {
+  const es = new EventSource(`${base}/events`);
+  es.onopen = () => { $('connChip').textContent = 'bridge: live'; $('bridgeDot').dataset.state = 'up'; };
+  es.onerror = () => { $('connChip').textContent = 'bridge: reconnecting…'; $('bridgeDot').dataset.state = 'down'; };
+  es.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'snapshot') {
+      turns.asr = data.asr || []; turns.tts = data.tts || [];
+      render('asr'); render('tts'); return;
+    }
+    if (data.type === 'asr' || data.type === 'tts') push(data.type, { at: data.at, text: data.text }, Boolean(data.replace));
+    if (data.type === 'status') $('connChip').textContent = data.connected ? 'bridge: live' : 'bridge: ssh down';
+  };
+}
+
+$('btnAudio').addEventListener('click', async () => {
+  const a = $('lukaAudio');
+  a.src = `${base}/audio?t=${Date.now()}`;
+  $('audioState').textContent = 'connecting…';
+  try { await a.play(); $('audioState').textContent = 'streaming loopback'; }
+  catch (e) { $('audioState').textContent = `playback blocked: ${e.message}`; }
+});
+$('btnTone').addEventListener('click', async () => {
+  const a = $('lukaAudio');
+  a.src = '/test-tone';
+  try { await a.play(); $('audioState').textContent = 'test tone playing'; }
+  catch (e) { $('audioState').textContent = `test tone blocked: ${e.message}`; }
+});
+$('lukaAudio').addEventListener('playing', () => { $('audioState').textContent = 'streaming loopback'; });
+$('lukaAudio').addEventListener('error', () => { $('audioState').textContent = 'audio stream failed'; });
+
+function updateTuningReadout() {
+  const provider = $('sayProvider').value;
+  $('sayRateValue').textContent = provider === 'inworld'
+    ? `${Number($('sayRate').value).toFixed(2)}×`
+    : `${Math.round(Number($('sayRate').value))} wpm`;
+  const pitch = Math.round(Number($('sayPitch').value));
+  $('sayPitchValue').textContent = provider === 'inworld'
+    ? `${pitch > 0 ? '+' : ''}${pitch} semitones`
+    : 'not supported';
+}
+
+function configureTuning(provider, defaults = {}) {
+  const rate = $('sayRate');
+  const pitch = $('sayPitch');
+  if (provider === 'inworld') {
+    rate.min = '0.8'; rate.max = '1.5'; rate.step = '0.05';
+    rate.value = String(defaults.rate ?? 0.85);
+    pitch.disabled = false;
+    pitch.min = '-12'; pitch.max = '6'; pitch.step = '1';
+    pitch.value = String(defaults.pitch ?? -4);
+    $('sayState').textContent = `${defaults.model || 'Inworld TTS-2'} pitch is shifted after synthesis; rate is adjusted separately.`;
+  } else {
+    rate.min = '100'; rate.max = '300'; rate.step = '5';
+    rate.value = String(defaults.rate ?? 165);
+    pitch.value = '0'; pitch.disabled = true;
+    $('sayState').textContent = 'macOS rate is measured in words per minute; pitch adjustment is available with Inworld.';
+  }
+  updateTuningReadout();
+}
+
+async function loadVoices(requestedProvider = '') {
+  try {
+    const path = requestedProvider ? `/voices?provider=${encodeURIComponent(requestedProvider)}` : '/voices';
+    const r = await fetch(path, { cache: 'no-store' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    const provider = data.provider || requestedProvider || 'inworld';
+    const list = data.voices || [];
+    const select = $('sayVoice');
+    const preferred = voiceSelection.get(provider) || data.defaults?.voice || list[0]?.name;
+    $('sayProvider').value = provider;
+    select.replaceChildren(...list.map((voice) => {
+      const option = document.createElement('option');
+      option.value = voice.name;
+      option.textContent = `${voice.label || voice.name}${voice.locale ? ` · ${voice.locale}` : ''}`;
+      return option;
+    }));
+    if (list.some((voice) => voice.name === preferred)) select.value = preferred;
+    if (select.value) voiceSelection.set(provider, select.value);
+    configureTuning(provider, data.defaults || {});
+  } catch (e) {
+    $('sayState').textContent = `Could not load ${requestedProvider || 'default'} voices: ${e.message}`;
+  }
+}
+
+$('sayProvider').addEventListener('change', () => loadVoices($('sayProvider').value));
+$('sayVoice').addEventListener('change', () => voiceSelection.set($('sayProvider').value, $('sayVoice').value));
+$('sayRate').addEventListener('input', updateTuningReadout);
+$('sayPitch').addEventListener('input', updateTuningReadout);
+
+$('btnSay').addEventListener('click', async () => {
+  const text = $('sayText').value.trim();
+  if (!text) { $('sayState').textContent = 'type something first'; return; }
+  const btn = $('btnSay');
+  btn.disabled = true;
+  $('sayState').textContent = 'preparing and playing…';
+  try {
+    const r = await fetch('/say', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        provider: $('sayProvider').value,
+        voice: $('sayVoice').value,
+        rate: Number($('sayRate').value),
+        pitch: $('sayProvider').value === 'inworld' ? Number($('sayPitch').value) : 0,
+        local: $('sayLocal').checked,
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    const tuning = data.provider === 'inworld'
+      ? ` · ${data.model} · rate ${data.rate}× · pitch ${data.pitch} semitones`
+      : ` · ${data.rate} wpm`;
+    $('sayState').textContent = `spoke ${data.chunks} chunk(s) · ${(data.durationMs / 1000).toFixed(1)} s · ${data.provider} · ${data.voice}${tuning}${data.local ? ' · local' : ''}`;
+  } catch (e) {
+    $('sayState').textContent = `failed: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+});
+$('sayText').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnSay').click(); });
+
+load(); connectSse(); loadVoices();
+</script>
+<script type="module" src="/head-controls.js"></script>
+<script>for (const [id, path] of [["gwLink","/"],["voiceLink","/voice.html"]]) { const a=document.getElementById(id); if(a) a.href=`http://${location.hostname}:8788${path}`; }</script>
+</body>
+</html>

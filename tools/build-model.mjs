@@ -79,10 +79,15 @@ function parseUrdf(rawXml) {
     if (!name) continue;
     const visualMatch = body.match(/<visual\b[^>]*>([\s\S]*?)<\/visual>/);
     const visual = visualMatch ? [null, visualMatch[1]] : null;
-    let mesh = null, color = [0.6, 0.6, 0.6, 1], visualOrigin = [0, 0, 0, 0, 0, 0];
+    let mesh = null, color = [0.6, 0.6, 0.6, 1], visualOrigin = [0, 0, 0, 0, 0, 0], scale = 1;
     if (visual) {
       const vm = attr(visual[1], 'filename');
       if (vm) mesh = basename(vm);
+      const sm = visual[1].match(/<mesh\b([^>]*)>/);
+      if (sm && attr(sm[1], 'scale')) {
+        const sc = nums(attr(sm[1], 'scale'), 3);
+        scale = sc[0] || 1;
+      }
       const cm = visual[1].match(/<color\s+rgba\s*=\s*"([^"]+)"/);
       if (cm) color = nums(cm[1], 4);
       const om = visual[1].match(/<origin\b([^>]*)>/);
@@ -95,7 +100,7 @@ function parseUrdf(rawXml) {
       const cm = inertialM[1].match(/<origin\b([^>]*)>/);
       if (cm) comXyz = nums(attr(cm[1], 'xyz'), 3);
     }
-    links.push({ name, mesh, color, mass: massM ? Number(massM[1]) : 0, visualOrigin, comXyz });
+    links.push({ name, mesh, color, mass: massM ? Number(massM[1]) : 0, visualOrigin, comXyz, scale, hand: false });
   }
 
   const joints = [];
@@ -113,8 +118,12 @@ function parseUrdf(rawXml) {
     const axis = axisM ? nums(attr(axisM[1], 'xyz'), 3) : null;
     const limitM = body.match(/<limit\b([^>]*)\/?>/);
     const lim = limitM ? parseAttrs(limitM[1]) : {};
+    const mimicM = body.match(/<mimic\b([^>]*)\/?>/);
+    const mimicA = mimicM ? parseAttrs(mimicM[1]) : null;
     joints.push({
       name, type, parent: parent ? attr(parent, 'link') : null, child: child ? attr(child, 'link') : null, xyz, rpy, axis,
+      hand: false,
+      mimic: mimicA ? { joint: mimicA.joint, multiplier: Number(mimicA.multiplier ?? 1), offset: Number(mimicA.offset ?? 0) } : null,
       lower: lim.lower !== undefined ? Number(lim.lower) : null,
       upper: lim.upper !== undefined ? Number(lim.upper) : null,
       velocity: lim.velocity !== undefined ? Number(lim.velocity) : null,
@@ -126,7 +135,7 @@ function parseUrdf(rawXml) {
 
 /* ----------------------------------------------------------------- parse STL */
 
-async function readStl(path) {
+async function readStl(path, scale = 1, raw = false) {
   const buf = await readFile(path);
   if (buf.length < 84) throw new Error(`${path}: too small for binary STL`);
   const n = buf.readUInt32LE(80);
@@ -137,10 +146,11 @@ async function readStl(path) {
   for (let i = 0; i < n; i++) {
     const base = 84 + i * 50;
     const nx = buf.readFloatLE(base), ny = buf.readFloatLE(base + 4), nz = buf.readFloatLE(base + 8);
-    const nrm = zUpToYUp(nx, ny, nz);
+    const nrm = raw ? [nx, ny, nz] : zUpToYUp(nx, ny, nz);
     for (let v = 0; v < 3; v++) {
       const p = base + 12 + v * 12;
-      const pos = zUpToYUp(buf.readFloatLE(p), buf.readFloatLE(p + 4), buf.readFloatLE(p + 8));
+      const p0 = [buf.readFloatLE(p) * scale, buf.readFloatLE(p + 4) * scale, buf.readFloatLE(p + 8) * scale];
+      const pos = raw ? p0 : zUpToYUp(p0[0], p0[1], p0[2]);
       out[o++] = pos[0]; out[o++] = pos[1]; out[o++] = pos[2];
       out[o++] = nrm[0]; out[o++] = nrm[1]; out[o++] = nrm[2];
     }
@@ -165,6 +175,81 @@ if (links.length !== rawLinks || joints.length !== rawJoints) {
 const actuated = new Set([...mjcf.matchAll(/<motor\b([^>]*)\/?>/g)].map((m) => attr(m[1], 'joint')).filter(Boolean));
 if (actuated.size !== 12) throw new Error(`expected 12 actuators in the vendor MJCF, parsed ${actuated.size}`);
 
+/* ----------------------------------------------------------------- hand merge */
+// Inspire RH56DFX (MIT) from model/hand, mounted at the A2 hand links.
+// Hand parts keep their native frame; the mount matrix is expressed in the
+// Y-up model frame and is NOT run through the Z-up conversion.
+const HAND_ENABLED = process.env.HAND !== '0';
+const HAND_SCALE = 1.32;
+// 180° about the finger axis: palms face inward, fingers still point down.
+// (The first mount left the palm normal pointing away from the body.)
+const HAND_MOUNT = { rpy: [0, -Math.PI / 2, 0], xyz: [0, 0.065, 0] };
+let handMeta = null;
+const handXml = await readFile(join(MODEL_DIR, 'hand', 'rh56_hand.urdf'), 'utf8').catch(() => null);
+if (HAND_ENABLED && handXml) {
+  const hand = parseUrdf(handXml);
+  for (const l of links) if (l.name === 'left_hand' || l.name === 'right_hand') l.mesh = null;
+
+  const channelSpec = [
+    ['thumb_pos_0', 'thumb_1'], ['thumb_pos_1', 'thumb_2'],
+    ['index_pos', 'index_1'], ['middle_pos', 'middle_1'],
+    ['ring_pos', 'ring_1'], ['pinky_pos', 'little_1'],
+  ];
+  const channels = {};
+  const mimic = {};
+
+  for (const side of ['left', 'right']) {
+    const prefix = side === 'left' ? 'lh_' : 'rh_';
+    const re = new RegExp(`^${side}_`);
+
+    for (const l of hand.links) {
+      if (!re.test(l.name) || !l.mesh) continue;
+      links.push({ ...l, name: prefix + l.name, mesh: `hand/meshes/${l.mesh}`, scale: HAND_SCALE, hand: true });
+    }
+    for (const j of hand.joints) {
+      if (!re.test(j.name)) continue;
+      const nj = {
+        ...j,
+        name: prefix + j.name,
+        parent: prefix + j.parent,
+        child: prefix + j.child,
+        xyz: j.xyz.map((v) => v * HAND_SCALE),
+        hand: true,
+      };
+      joints.push(nj);
+      if (j.mimic) {
+        mimic[nj.name] = {
+          joint: prefix + j.mimic.joint,
+          multiplier: j.mimic.multiplier,
+          offset: j.mimic.offset,
+        };
+      }
+    }
+    joints.push({
+      name: `${prefix}mount`,
+      type: 'fixed',
+      parent: `${side}_hand`,
+      child: `${prefix}${side}_hand_base`,
+      xyz: HAND_MOUNT.xyz,
+      rpy: HAND_MOUNT.rpy,
+      axis: null, lower: null, upper: null, velocity: null, effort: null,
+      hand: false, mount: true, mimic: null,
+    });
+
+    for (const [channel, suffix] of channelSpec) {
+      const j = hand.joints.find((x) => x.name === `${side}_${suffix}_joint`);
+      if (!j) continue;
+      channels[channel] = channels[channel] || {};
+      channels[channel][side] = {
+        joint: `${prefix}${side}_${suffix}_joint`,
+        min: j.lower ?? 0,
+        max: j.upper ?? 1,
+      };
+    }
+  }
+  handMeta = { source: 'Inspire RH56DFX (MIT)', scale: HAND_SCALE, channels, mimic };
+}
+
 // A joint is movable in our twin if it is revolute, or fixed-but-limited
 // (the 16 arm/head joints the vendor models without actuation).
 for (const j of joints) {
@@ -175,6 +260,13 @@ for (const j of joints) {
 
 // Convert joint origins to Y-up and precompute the origin matrix.
 for (const j of joints) {
+  if (j.hand || j.mount) {
+    // Hand coordinates and the mount stay in the frames they were authored in.
+    j.originMatrix = multiply(translation(j.xyz[0], j.xyz[1], j.xyz[2]), rpyMatrix(j.rpy[0], j.rpy[1], j.rpy[2]));
+    j.axisYUp = j.axis;
+    j.xyzYUp = j.xyz;
+    continue;
+  }
   const [x, y, z] = j.xyz;
   const p = zUpToYUp(x, y, z);
   const R = rpyMatrix(j.rpy[0], j.rpy[1], j.rpy[2]);
@@ -186,6 +278,29 @@ for (const j of joints) {
   const rYUp = multiply(multiply(C, R), Ct);
   j.originMatrix = multiply(translation(p[0], p[1], p[2]), rYUp);
   j.axisYUp = j.axis ? zUpToYUp(j.axis[0], j.axis[1], j.axis[2]) : null;
+  // Measured correction: the left shoulder's second joint is the abduction
+  // axis, not the assumed pitch. `direction_upper left` drove the hand 30 cm
+  // behind; local -X moves it out and up instead.
+  if (j.name === 'idx20_right_arm_joint1') {
+    // Right joint 1 is the shoulder abduction, not an arm roll. With the rest
+    // offsets corrected it drives +1.41 rad in direction_upper right.
+    // Slight forward cant: direction_upper right lifts out and in front, not
+    // purely in the frontal plane.
+    j.axisYUp = [-0.3, 0, 0.954];
+  }
+  if (j.name === 'idx21_right_arm_joint2') {
+    // Right joint frames are mirrored: its positive direction is abduction, so
+    // the vendor's negative-heavy range must be swapped to allow the lift.
+    j.lower = -0.523598767;
+    j.upper = 1.658062761;
+  }
+  if (j.name === 'idx14_left_arm_joint2') {
+    j.axisYUp = [-1, 0, 0];
+    // Negating the axis negates the angle: mirror the limits too, otherwise the
+    // model clamps at the old -0.524 rad and can never lift to the robot's pose.
+    const lo = j.lower, hi = j.upper;
+    j.lower = -hi; j.upper = -lo;
+  }
   j.xyzYUp = p;
 }
 
@@ -199,8 +314,10 @@ let vertexOffset = 0;
 let totalTris = 0;
 
 for (const link of drawables) {
-  const path = join(MODEL_DIR, 'meshes', link.mesh);
-  const { triCount, data } = await readStl(path);
+  const path = link.mesh.startsWith('hand/')
+    ? join(MODEL_DIR, link.mesh)
+    : join(MODEL_DIR, 'meshes', link.mesh);
+  const { triCount, data } = await readStl(path, link.scale || 1, Boolean(link.hand));
   totalTris += triCount;
   chunks.push(data);
   ranges.push({ link: link.name, first: vertexOffset, count: data.length / 6, tris: triCount });
@@ -299,6 +416,7 @@ const model = {
       vendorModel: 'agibot_a2_dof12 (A2 T2D0 candidate)',
       license: 'Mulan PSL v2',
       status: 'ESTIMATED — not measured on Luka, not validated against his motion',
+      hand: handMeta ? 'Inspire RH56DFX (MIT) mounted as an approximation' : null,
     },
     counts: {
       links: links.length,
@@ -340,7 +458,9 @@ const model = {
     movable: j.movable,
     actuated: j.actuated,
     addedBeyondVendor: j.addedBeyondVendor,
+    ...(j.mimic ? { mimic: j.mimic } : {}),
   })),
+  ...(handMeta ? { hand: handMeta } : {}),
 };
 
 await mkdir(OUT_DIR, { recursive: true });
