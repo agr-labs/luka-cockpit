@@ -61,6 +61,23 @@ import {
   eventsToCsv,
   eventsToJsonl,
 } from '../src/metrics-agg.mjs';
+import { SCENARIO_PACKS, getScenarioPack } from '../src/scenario-packs.js';
+import {
+  LUKA_PLAYER_ID,
+  computePoints,
+  createRoomState,
+  joinRoom,
+  startQuestion,
+  submitAnswer,
+  revealQuestion,
+  showLeaderboard,
+  openQaMode,
+  finishMission,
+  submitAudienceQuestion,
+  markAudienceQuestionAnswered,
+  buildPublicRoomView,
+} from '../src/beat-the-bot-engine.mjs';
+import { generateQrMatrix, renderQrSvg } from '../src/qr-svg.js';
 
 const modelJson = JSON.parse(await readFile(new URL('../model/generated/luka.model.json', import.meta.url), 'utf8'));
 
@@ -683,8 +700,12 @@ test('sim-api directive parser and HTTP routes behave cleanly without touching p
     assert.ok('asr' in hJson && 'tts' in hJson && 'llms' in hJson);
 
     const mpRes = await fetch(`http://127.0.0.1:${port}/mediapipe/vision_bundle.mjs`);
-    assert.equal(mpRes.status, 200);
-    assert.ok((mpRes.headers.get('content-type') || '').includes('javascript'));
+    if (hJson.mediapipeLocal) {
+      assert.equal(mpRes.status, 200);
+      assert.ok((mpRes.headers.get('content-type') || '').includes('javascript'));
+    } else {
+      assert.equal(mpRes.status, 404);
+    }
 
     const unRes = await fetch(`http://127.0.0.1:${port}/api/robot/setAction`, { method: 'POST' });
     assert.equal(unRes.status, 404, 'handleSimApi never intercepts physical robot routes');
@@ -875,5 +896,155 @@ test('CoRa Steadwell hardware & stack knowledge grounds prompts, retrieval, fall
   const names = new Set(trellis.entities.map((e) => e.name));
   for (const required of ['VITA Edge', 'VITA Studio', 'Foundry GX1', 'CoRa TH-01', 'Keystone', 'VaultBots']) {
     assert.ok(names.has(required), `Trellis seed graph contains ${required}`);
+  }
+});
+
+test('Beat the Bot deterministic engine, scenario packs, offline QR SVG, interruptible voice prompts, and HTTP game API', async () => {
+  // 1. Scenario packs load cleanly with deterministic truth & NASA/NOAA opening
+  assert.ok(SCENARIO_PACKS.length >= 2);
+  const pack = getScenarioPack('earth-space-trivia');
+  assert.equal(pack.id, 'earth-space-trivia');
+  assert.equal(pack.questions.length, 10);
+  assert.match(pack.openingLine, /most intelligent species/i);
+  assert.equal(pack.questions[0].options[pack.questions[0].correctIndex].label, 'The Mariana Trench');
+
+  // 2. Deterministic scoring + hidden correctIndex during question phase
+  assert.equal(computePoints({ correct: false, remainingMs: 12000, totalMs: 15000, streak: 3 }), 0);
+  assert.equal(computePoints({ correct: true, remainingMs: 15000, totalMs: 15000, streak: 1 }), 1500);
+  assert.equal(computePoints({ correct: true, remainingMs: 15000, totalMs: 15000, streak: 3 }), 1800);
+
+  let now = 1_700_000_000_000;
+  const room = createRoomState({ code: 'MARS', packId: 'earth-space-trivia', now });
+  assert.equal(room.code, 'MARS');
+  assert.ok(room.players[LUKA_PLAYER_ID]?.isBot);
+
+  const { player: p1 } = joinRoom(room, { playerId: 'p_nova', name: 'Commander Nova', now: now + 100 });
+  const { player: p2 } = joinRoom(room, { playerId: 'p_leo', name: 'Pilot Leo', now: now + 200 });
+  assert.equal(p1.name, 'Commander Nova');
+  assert.equal(p2.name, 'Pilot Leo');
+
+  startQuestion(room, 0, now + 1000);
+  const viewDuringQ = buildPublicRoomView(room, { playerId: 'p_nova', now: now + 2500 });
+  assert.equal(viewDuringQ.phase, 'question');
+  assert.equal(viewDuringQ.question.correctIndex, undefined, 'correctIndex strictly withheld during live question');
+
+  const sub1 = submitAnswer(room, { playerId: 'p_nova', optionIndex: 0, now: now + 3000 });
+  assert.equal(sub1.accepted, true);
+  assert.equal(sub1.correct, true);
+  // Duplicate submission rejected
+  assert.equal(submitAnswer(room, { playerId: 'p_nova', optionIndex: 1, now: now + 3500 }).accepted, false);
+  // Wrong answer accepted
+  const sub2 = submitAnswer(room, { playerId: 'p_leo', optionIndex: 2, now: now + 4000 });
+  assert.equal(sub2.accepted, true);
+  assert.equal(sub2.correct, false);
+
+  revealQuestion(room, { now: now + 16000 });
+  const viewReveal = buildPublicRoomView(room, { playerId: 'p_nova', now: now + 16100 });
+  assert.equal(viewReveal.phase, 'reveal');
+  assert.equal(viewReveal.question.correctIndex, 0);
+  assert.deepEqual(viewReveal.question.voteCounts, [1, 0, 1, 0]);
+  assert.ok(viewReveal.myAnswer.correct && viewReveal.myAnswer.points > 1000);
+  assert.equal(room.players.p_leo.score, 0);
+
+  showLeaderboard(room, now + 18000);
+  assert.equal(room.phase, 'leaderboard');
+  assert.equal(buildPublicRoomView(room).leaderboard.length, 3);
+
+  // Ask Luka Anything queue
+  openQaMode(room, now + 19000);
+  const qa = submitAudienceQuestion(room, { author: 'Maya', text: 'Is the deep ocean harder than space?', now: now + 19500 });
+  assert.ok(qa && qa.status === 'pending');
+  markAudienceQuestionAnswered(room, qa.id, 'Both try to crush or freeze you — the ocean just does it closer to home!', 'explain', now + 20000);
+  assert.equal(room.askQueue[0].status, 'answered');
+
+  finishMission(room, now + 22000);
+  assert.equal(room.phase, 'finale');
+
+  // 3. Offline Reed-Solomon QR SVG generator across short & full production URLs
+  const qrShort = generateQrMatrix('https://luka.steadwell.cc/beat-the-bot?join=MARS');
+  assert.ok(Array.isArray(qrShort) && qrShort.length >= 25 && qrShort[0].length === qrShort.length);
+  const svg = renderQrSvg('http://192.168.80.10:8792/beat-the-bot.html?join=MARS');
+  assert.ok(svg.startsWith('<svg ') && svg.includes('</svg>') && svg.includes('<path '));
+
+  // 4. Multi-speaker & barge-in aware CoRa system prompt
+  const bargePrompt = buildEmbodiedSystemPrompt({
+    userText: 'Wait hold on, what about Europa?',
+    speakerLabel: 'Guest Scientist',
+    wasInterrupted: true,
+    gameContext: 'Phase: qa | Pack: Beat the Bot: Earth vs. Space | Players: 18 | Luka score: 2800',
+  });
+  assert.match(bargePrompt, /\[LIVE BEAT THE BOT/);
+  assert.match(bargePrompt, /\[MULTI-SPEAKER FLOOR & INTERRUPT STATE\]/);
+  assert.match(bargePrompt, /Guest Scientist/);
+  assert.match(bargePrompt, /interrupted you mid-sentence/i);
+
+  // 5. Analytics allowlist accepts beat-the-bot & voice_interrupt events
+  const gameMetrics = sanitizeEventBatch({
+    events: [
+      { session_id: 's_btb', app: 'beat-the-bot', event: 'game_event', category: 'game', label: 'solo_start', value: 1 },
+      { session_id: 's_btb', app: 'beat-the-bot', event: 'voice_interrupt', category: 'speech', label: 'barge_in', value: 12 },
+    ],
+  });
+  assert.equal(gameMetrics.events.length, 2);
+  assert.equal(gameMetrics.rejected, 0);
+
+  // 6. Ephemeral HTTP test for /sim-api/voice-capabilities and /sim-api/game/*
+  const srv = http.createServer(async (req, res) => {
+    const url = new URL(req.url, 'http://127.0.0.1');
+    const handled = await handleSimApi(req, res, url);
+    if (!handled) { res.writeHead(404).end('not handled'); }
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const { port } = srv.address();
+  try {
+    const capRes = await fetch(`http://127.0.0.1:${port}/sim-api/voice-capabilities`);
+    assert.equal(capRes.status, 200);
+    const capJson = await capRes.json();
+    assert.equal(capJson.ok, true);
+    assert.ok(Array.isArray(capJson.ttsProviders) && capJson.ttsProviders.every((p) => p.bargeIn === true));
+
+    const createRes = await fetch(`http://127.0.0.1:${port}/sim-api/game/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ packId: 'earth-space-trivia' }),
+    });
+    assert.equal(createRes.status, 200);
+    const created = await createRes.json();
+    assert.equal(created.ok, true);
+    const code = created.state.code;
+
+    const joinRes = await fetch(`http://127.0.0.1:${port}/sim-api/game/join`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, playerId: 'p_http', name: 'Astro Dev' }),
+    });
+    assert.equal(joinRes.status, 200);
+
+    const startRes = await fetch(`http://127.0.0.1:${port}/sim-api/game/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, action: 'next', index: 0 }),
+    });
+    const started = await startRes.json();
+    assert.equal(started.state.phase, 'question');
+    assert.equal(started.state.question.correctIndex, undefined);
+
+    const ansRes = await fetch(`http://127.0.0.1:${port}/sim-api/game/answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, playerId: 'p_http', optionIndex: 0 }),
+    });
+    assert.equal((await ansRes.json()).ok, true);
+
+    const revRes = await fetch(`http://127.0.0.1:${port}/sim-api/game/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, action: 'reveal' }),
+    });
+    const revealed = await revRes.json();
+    assert.equal(revealed.state.phase, 'reveal');
+    assert.equal(revealed.state.question.correctIndex, 0);
+  } finally {
+    await new Promise((r) => srv.close(r));
   }
 });

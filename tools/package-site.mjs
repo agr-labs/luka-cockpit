@@ -17,6 +17,10 @@ const DIST = join(ROOT, 'dist');
 const FILES = [
   'index.html',
   'landing.css',
+  'beat-the-bot.html',
+  'beat-the-bot.css',
+  'manifest.webmanifest',
+  'sw.js',
   'analytics.html',
   'cockpit.html',
   'styles.css',
@@ -64,7 +68,7 @@ async function main() {
 
   // Stamp the build so pages know they are static without probing (a failed
   // /api/health or /sim-api/health probe would log a 404 in every visitor's console).
-  for (const name of ['index.html', 'analytics.html', 'cockpit.html', 'luka-sim.html']) {
+  for (const name of ['index.html', 'beat-the-bot.html', 'analytics.html', 'cockpit.html', 'luka-sim.html']) {
     const htmlPath = join(DIST, name);
     const html = await readFile(htmlPath, 'utf8');
     await writeFile(

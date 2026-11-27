@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#04070d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Beat the Bot" />
+  <title>LUKA · Beat the Bot — Mission Earth &amp; Beyond</title>
+  <meta name="description" content="Challenge Luka v. A2U in Mission Earth &amp; Beyond — a live Kahoot-meets-J.A.R.V.I.S. Sea &amp; Space trivia and Ask Luka Anything PWA powered by Steadwell CoRa, LukaSim 3D, and interruptible streaming voice." />
+  <link rel="canonical" href="https://luka.steadwell.cc/beat-the-bot" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Steadwell Robotics" />
+  <meta property="og:title" content="LUKA · Beat the Bot — Mission Earth &amp; Beyond" />
+  <meta property="og:description" content="Scan to join, outsmart Luka v. A2U in NASA/NOAA Sea &amp; Space trivia, and challenge him live on stage." />
+  <meta property="og:url" content="https://luka.steadwell.cc/beat-the-bot" />
+  <meta property="og:image" content="https://luka.steadwell.cc/og-luka.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://luka.steadwell.cc/og-luka.png" />
+
+  <link rel="stylesheet" href="./beat-the-bot.css" />
+</head>
+<body data-role="stage" data-phase="lobby">
+  <div class="mc-backdrop" aria-hidden="true">
+    <div class="mc-glow-cyan"></div>
+    <div class="mc-glow-amber"></div>
+    <div class="mc-grid"></div>
+  </div>
+
+  <div class="mc-shell">
+    <!-- TOP MISSION CONTROL HUD BAR -->
+    <header class="mc-topbar">
+      <div class="mc-top-left">
+        <a href="./" class="mc-brand" aria-label="Back to Steadwell Robotics Hub">
+          <span class="mc-brand-mark" aria-hidden="true"><i></i><i></i></span>
+          <span class="mc-brand-copy">
+            <strong>LUKA · BEAT THE BOT</strong>
+            <small>MISSION EARTH &amp; BEYOND</small>
+          </span>
+        </a>
+        <div class="mc-mode-tabs" role="tablist" aria-label="Experience role">
+          <button type="button" class="mc-tab is-active" id="tabStageMode" role="tab" aria-selected="true">Stage Host</button>
+          <button type="button" class="mc-tab" id="tabPlayerMode" role="tab" aria-selected="false">Join Game</button>
+        </div>
+      </div>
+
+      <div class="mc-top-center">
+        <div class="mc-telemetry-dock">
+          <span class="mc-room-pill" id="topRoomPill">ROOM <strong id="topRoomCode">----</strong></span>
+          <span class="mc-dock-sep" aria-hidden="true"></span>
+          <span class="mc-status-chip"><i class="mc-dot" id="transportDot"></i><span id="transportLabel">CONNECTING</span></span>
+          <span class="mc-dock-sep hide-sm" aria-hidden="true"></span>
+          <span class="mc-status-chip hide-sm"><i class="mc-dot cyan" id="voiceProviderDot"></i><span id="voiceProviderLabel">STREAMING VOICE</span></span>
+        </div>
+      </div>
+
+      <div class="mc-top-right">
+        <button type="button" class="mc-pill-btn" id="btnInstallPwa" hidden title="Install Beat the Bot PWA">
+          Install App
+        </button>
+        <button type="button" class="mc-pill-btn" id="btnAudioMute" aria-pressed="false" title="Toggle Luka voice & mission audio">
+          <span id="audioMuteIcon" aria-hidden="true">🔊</span>
+          <span class="hide-sm" id="audioMuteLabel">Voice On</span>
+        </button>
+        <a href="./luka-sim.html" class="mc-pill-btn ghost hide-md">3D Studio ↗</a>
+        <a href="./" class="mc-pill-btn ghost hide-sm">Hub</a>
+      </div>
+    </header>
+
+    <!-- =========================================================== STAGE / HOST MODE -->
+    <main class="mc-stage-layout" id="stageLayout">
+      <!-- LEFT: J.A.R.V.I.S. HOLOGRAPHIC LUKASIM 3D STAGE VIEWPORT -->
+      <section class="jarvis-viewport" id="jarvisViewport" data-voice-state="idle" aria-label="LukaSim live 3D AI host stage">
+        <div class="jarvis-hud-rings" aria-hidden="true">
+          <span class="j-ring outer"></span>
+          <span class="j-ring inner"></span>
+          <span class="j-corner tl"></span>
+          <span class="j-corner tr"></span>
+          <span class="j-corner bl"></span>
+          <span class="j-corner br"></span>
+        </div>
+
+        <canvas id="lukaStageCanvas" aria-label="Live 3D LukaSim animated robot host"></canvas>
+
+        <!-- Boot loader overlay -->
+        <div class="stage-boot" id="stageBoot">
+          <div class="stage-boot-ring" aria-hidden="true"></div>
+          <strong id="stageBootTitle">INITIALIZING LUKASIM 3D HOST</strong>
+          <small id="stageBootMsg">Loading WebGPU / WebGL2 renderer…</small>
+          <div class="stage-boot-bar"><i id="stageBootFill"></i></div>
+        </div>
+
+        <!-- Top HUD inside 3D stage -->
+        <div class="jarvis-top-hud">
+          <div class="jarvis-badge-group">
+            <span class="j-pill live"><i id="lukaStateDot"></i><span id="lukaStateLabel">ONLINE · READY</span></span>
+            <span class="j-pill mono" id="lukaGesturePill">IDLE</span>
+            <span class="j-pill mono hide-sm" id="lukaRendererPill">3D</span>
+          </div>
+
+          <div class="jarvis-cam-pills" aria-label="Stage camera presets">
+            <button type="button" class="j-cam-btn is-active" data-cam="host">Host</button>
+            <button type="button" class="j-cam-btn" data-cam="head">Head</button>
+            <button type="button" class="j-cam-btn" data-cam="upper">Upper</button>
+          </div>
+        </div>
+
+        <!-- Live Subtitle + Audio Spectrum Overlay -->
+        <div class="jarvis-speech-hud">
+          <div class="jarvis-caption-card" id="jarvisCaptionCard">
+            <div class="jarvis-caption-meta">
+              <span class="j-speaker-tag" id="captionSpeakerTag">LUKA v. A2U · CoRa HOST</span>
+              <span class="j-wave-bars" id="jarvisWaveBars" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </span>
+            </div>
+            <p class="jarvis-caption-text" id="lukaCaptionText">
+              Welcome, humans. I have been informed that you are the most intelligent species on this planet. Tonight, we test that theory.
+            </p>
+          </div>
+
+          <!-- Full-Duplex Interrupt & Multi-Speaker Stage Dock -->
+          <div class="jarvis-voice-dock">
+            <div class="voice-dock-row">
+              <button type="button" class="j-action-btn duplex" id="btnDuplexMic" aria-pressed="false" title="Continuous echo-cancelled barge-in mic — interrupt Luka mid-sentence!">
+                <span class="j-mic-dot" aria-hidden="true"></span>
+                <span id="duplexMicLabel">Barge-In Mic: Off</span>
+              </button>
+
+              <button type="button" class="j-action-btn ptt" id="btnStagePtt" title="Hold to speak to Luka right now (cuts Luka immediately)">
+                <span>Hold to Speak</span>
+              </button>
+
+              <button type="button" class="j-action-btn cut" id="btnInterruptLuka" title="Immediately cut Luka mid-sentence (Esc)">
+                <span>Cut / Interrupt</span>
+              </button>
+            </div>
+
+            <div class="voice-dock-row multi-speaker-row">
+              <span class="j-floor-label">FLOOR SPEAKER</span>
+              <div class="speaker-pills" id="speakerFloorPills" role="group" aria-label="Active stage speaker">
+                <button type="button" class="sp-pill is-active" data-speaker="Host">Host</button>
+                <button type="button" class="sp-pill" data-speaker="Scientist">Scientist</button>
+                <button type="button" class="sp-pill" data-speaker="Challenger">Challenger</button>
+                <button type="button" class="sp-pill" data-speaker="Audience">Audience</button>
+              </div>
+              <div class="mic-meter" aria-hidden="true"><i id="duplexMicFill"></i></div>
+            </div>
+
+            <form class="stage-banter-form" id="stageBanterForm">
+              <input
+                type="text"
+                id="stageBanterInput"
+                placeholder="Talk or interrupt Luka on stage (e.g. 'Roast the crowd!' or 'Ocean vs orbit?')…"
+                autocomplete="off"
+                maxlength="240"
+              />
+              <button type="submit" class="j-send-btn">Send</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: KAHOOT MEETS J.A.R.V.I.S. MISSION CONTROL ARENA -->
+      <section class="arena-panel" id="arenaPanel" aria-label="Beat the Bot game arena">
+        <!-- Mission Header Strip -->
+        <div class="arena-top-strip">
+          <div class="arena-pack-meta">
+            <span class="arena-badge" id="arenaPackBadge">MISSION EARTH &amp; BEYOND</span>
+            <span class="arena-round-chip" id="arenaRoundChip">STANDBY</span>
+          </div>
+
+          <div class="arena-score-vs">
+            <span class="vs-pill human">HUMANS <strong id="topHumanScore">0</strong></span>
+            <span class="vs-sep">VS</span>
+            <span class="vs-pill bot">LUKA <strong id="topLukaScore">0</strong></span>
+          </div>
+        </div>
+
+        <!-- VIEW 1: MISSION LOBBY + QR CODE JOIN -->
+        <div class="arena-view" id="viewLobby">
+          <div class="lobby-hero-row">
+            <div class="lobby-copy">
+              <h1 id="lobbyTitle">Beat the Bot: Earth vs. Space</h1>
+              <p id="lobbySubtitle">
+                Scan the QR code to join from any phone — or jump straight into Solo Mission Mode right on this screen.
+                Deterministic scoring, real-time leaderboard, and live CoRa commentary from Luka.
+              </p>
+
+              <div class="pack-selector" id="packSelector" role="group" aria-label="Scenario pack">
+                <!-- Populated from SCENARIO_PACKS -->
+              </div>
+
+              <div class="lobby-cta-row">
+                <button type="button" class="mc-cta primary" id="btnStartSolo">
+                  Play Solo vs. Luka <span aria-hidden="true">→</span>
+                </button>
+                <button type="button" class="mc-cta cyan" id="btnStartHosted">
+                  Launch Live Room <span aria-hidden="true">▶</span>
+                </button>
+                <button type="button" class="mc-cta ghost" id="btnOpenQaFromLobby">
+                  Ask Luka Anything
+                </button>
+              </div>
+            </div>
+
+            <div class="qr-mission-card">
+              <div class="qr-head">
+                <span>SCAN TO JOIN ON PHONE</span>
+                <button type="button" class="qr-copy-btn" id="btnCopyJoinLink">Copy Link</button>
+              </div>
+              <div class="qr-frame" id="qrSvgHost" aria-label="Room QR Code"></div>
+              <div class="qr-code-display">
+                <small>ROOM CODE</small>
+                <strong id="lobbyRoomCode">----</strong>
+              </div>
+              <p class="qr-url-caption" id="lobbyJoinUrl">Loading mission room…</p>
+            </div>
+          </div>
+
+          <div class="lobby-roster-card">
+            <div class="roster-head">
+              <span>CREW MANIFEST · <strong id="lobbyPlayerCount">0</strong> HUMAN CHALLENGERS + LUKA</span>
+              <span class="roster-hint">Phones join via QR or Room Code · Works offline on local Wi-Fi</span>
+            </div>
+            <div class="roster-chips" id="lobbyRosterList">
+              <span class="roster-chip bot">🤖 LUKA v. A2U · READY</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 2: OPENING INTRO BRIEFING -->
+        <div class="arena-view" id="viewIntro" hidden>
+          <div class="intro-stage-card">
+            <span class="intro-kicker">MISSION BRIEFING · STANDBY FOR LAUNCH</span>
+            <h2 id="introHeadline">Humans vs. Luka v. A2U</h2>
+            <p class="intro-quote" id="introQuote">
+              “Welcome, humans. I have been informed that you are the most intelligent species on this planet. Tonight, we test that theory.”
+            </p>
+            <div class="intro-stats-row">
+              <div class="intro-stat"><strong id="introQCount">10</strong><span>NASA / NOAA Rounds</span></div>
+              <div class="intro-stat"><strong>1,500+</strong><span>Max Pts / Round</span></div>
+              <div class="intro-stat"><strong id="introCrewCount">1</strong><span>Live Challengers</span></div>
+            </div>
+            <div class="arena-action-bar">
+              <button type="button" class="mc-cta primary lg" id="btnLaunchQ1">Start Round 1 →</button>
+              <button type="button" class="mc-cta ghost" id="btnIntroBackLobby">Back to Lobby</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 3: ACTIVE QUESTION + RADIAL COUNTDOWN + 4 KAHOOT TILES -->
+        <div class="arena-view" id="viewQuestion" hidden>
+          <div class="question-header-bar">
+            <div class="q-meta-stack">
+              <span class="q-cat-pill" id="qCategoryPill">DEEP OCEAN</span>
+              <span class="q-progress-text" id="qProgressText">ROUND 1 OF 10</span>
+            </div>
+
+            <!-- J.A.R.V.I.S. Radial SVG Countdown -->
+            <div class="radial-timer" id="radialTimer">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <circle class="rt-track" cx="32" cy="32" r="27" />
+                <circle class="rt-arc" id="radialTimerArc" cx="32" cy="32" r="27" />
+              </svg>
+              <strong id="timerSecondsText">15</strong>
+            </div>
+
+            <div class="q-live-counters">
+              <span class="q-count-pill">LOCKED IN <strong id="qAnsweredCount">0 / 0</strong></span>
+              <span class="q-luka-pill" id="qLukaLockPill">LUKA: THINKING…</span>
+            </div>
+          </div>
+
+          <h2 class="q-prompt-title" id="qPromptText">Which of these is the deepest known point on Earth?</h2>
+
+          <!-- 4 Kahoot Neon-Glass Geometric Answer Tiles -->
+          <div class="kahoot-grid" id="stageAnswerGrid">
+            <button type="button" class="k-tile shape-triangle" data-opt="0">
+              <span class="k-shape" aria-hidden="true">▲</span>
+              <span class="k-label" id="optLabel0">Option A</span>
+              <span class="k-key">1</span>
+              <span class="k-bar-fill" id="optFill0"></span>
+              <span class="k-votes" id="optVotes0" hidden></span>
+              <span class="k-luka-tag" id="optLuka0" hidden>LUKA</span>
+            </button>
+            <button type="button" class="k-tile shape-diamond" data-opt="1">
+              <span class="k-shape" aria-hidden="true">◆</span>
+              <span class="k-label" id="optLabel1">Option B</span>
+              <span class="k-key">2</span>
+              <span class="k-bar-fill" id="optFill1"></span>
+              <span class="k-votes" id="optVotes1" hidden></span>
+              <span class="k-luka-tag" id="optLuka1" hidden>LUKA</span>
+            </button>
+            <button type="button" class="k-tile shape-circle" data-opt="2">
+              <span class="k-shape" aria-hidden="true">●</span>
+              <span class="k-label" id="optLabel2">Option C</span>
+              <span class="k-key">3</span>
+              <span class="k-bar-fill" id="optFill2"></span>
+              <span class="k-votes" id="optVotes2" hidden></span>
+              <span class="k-luka-tag" id="optLuka2" hidden>LUKA</span>
+            </button>
+            <button type="button" class="k-tile shape-square" data-opt="3">
+              <span class="k-shape" aria-hidden="true">■</span>
+              <span class="k-label" id="optLabel3">Option D</span>
+              <span class="k-key">4</span>
+              <span class="k-bar-fill" id="optFill3"></span>
+              <span class="k-votes" id="optVotes3" hidden></span>
+              <span class="k-luka-tag" id="optLuka3" hidden>LUKA</span>
+            </button>
+          </div>
+
+          <!-- Reveal Fact & Solo Feedback Banner -->
+          <div class="reveal-fact-card" id="revealFactCard" hidden>
+            <div class="reveal-fact-head">
+              <span class="reveal-verdict" id="revealVerdictBadge">MISSION FACT</span>
+              <span class="reveal-points-delta" id="revealPointsDelta"></span>
+            </div>
+            <p id="revealFactText"></p>
+          </div>
+
+          <!-- Stage Control Strip -->
+          <div class="arena-action-bar">
+            <button type="button" class="mc-cta amber" id="btnRevealAnswer">Reveal Answer</button>
+            <button type="button" class="mc-cta primary" id="btnShowLeaderboard" hidden>Leaderboard →</button>
+            <button type="button" class="mc-cta cyan" id="btnNextQuestion" hidden>Next Round →</button>
+            <button type="button" class="mc-cta ghost" id="btnPivotToQa">Ask Luka Q&amp;A</button>
+          </div>
+        </div>
+
+        <!-- VIEW 4: HUMANS VS. LUKA LEADERBOARD / FINALE -->
+        <div class="arena-view" id="viewLeaderboard" hidden>
+          <div class="lb-header">
+            <div>
+              <span class="arena-badge" id="lbKicker">LIVE TELEMETRY STANDINGS</span>
+              <h2 id="lbHeadline">Humans vs. Luka</h2>
+            </div>
+            <span class="lb-verdict-pill" id="lbVerdictPill">RACE IN PROGRESS</span>
+          </div>
+
+          <div class="leaderboard-list" id="stageLeaderboardList"></div>
+
+          <div class="arena-action-bar">
+            <button type="button" class="mc-cta primary lg" id="btnLbNext">Next Round →</button>
+            <button type="button" class="mc-cta cyan" id="btnLbQa">Ask Luka Anything</button>
+            <button type="button" class="mc-cta ghost" id="btnLbReset">New Mission</button>
+          </div>
+        </div>
+
+        <!-- VIEW 5: ASK LUKA ANYTHING (OCEAN VS. ORBIT LIVE Q&A) -->
+        <div class="arena-view" id="viewQa" hidden>
+          <div class="qa-head">
+            <div>
+              <span class="arena-badge">STAGE DIALOGUE · OCEAN VS. ORBIT</span>
+              <h2>Ask Luka Anything</h2>
+            </div>
+            <button type="button" class="mc-cta ghost sm" id="btnReturnToGame">← Back to Quiz</button>
+          </div>
+
+          <div class="qa-starters" id="qaStarterChips"></div>
+
+          <div class="qa-queue-box">
+            <div class="roster-head">
+              <span>AUDIENCE PHONE QUEUE (<strong id="qaQueueCount">0</strong>)</span>
+              <span class="roster-hint">Tap any question to have Luka answer live on stage</span>
+            </div>
+            <div class="qa-queue-list" id="qaQueueList">
+              <div class="qa-empty">Guests can submit questions from their phones — or tap a topic above!</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- =========================================================== PHONE / PLAYER CONTROLLER MODE -->
+    <main class="player-layout" id="playerLayout" hidden>
+      <!-- Player Join Screen -->
+      <section class="player-join-card" id="playerJoinCard">
+        <div class="mini-visor-wrap" aria-hidden="true">
+          <div class="mini-head">
+            <div class="mini-eyes"><i></i><i></i></div>
+            <div class="mini-wave"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+        <span class="arena-badge">LUKA · MISSION EARTH &amp; BEYOND</span>
+        <h1>Join Beat the Bot</h1>
+        <p>Enter the 4-letter Room Code from the big screen and pick your explorer callsign.</p>
+
+        <form class="player-join-form" id="playerJoinForm">
+          <label class="p-field">
+            <span>ROOM CODE</span>
+            <input type="text" id="joinCodeInput" placeholder="e.g. LUKA" maxlength="8" autocomplete="off" required />
+          </label>
+          <label class="p-field">
+            <span>YOUR CALLSIGN</span>
+            <input type="text" id="joinNameInput" placeholder="Commander Alex" maxlength="22" autocomplete="nickname" required />
+          </label>
+          <button type="submit" class="mc-cta primary lg full">Enter Mission Control →</button>
+        </form>
+        <p class="join-error" id="joinErrorText" hidden></p>
+      </section>
+
+      <!-- Active Phone Controller -->
+      <section class="player-controller" id="playerController" hidden>
+        <div class="player-hud-card">
+          <div class="player-mini-luka" id="playerMiniLuka" data-mood="neutral">
+            <div class="mini-eyes"><i></i><i></i></div>
+          </div>
+          <div class="player-id-col">
+            <strong id="playerCallsignDisplay">Explorer</strong>
+            <small id="playerRoomDisplay">ROOM ----</small>
+          </div>
+          <div class="player-score-col">
+            <strong id="playerScoreDisplay">0</strong>
+            <small id="playerRankDisplay">RANK #--</small>
+          </div>
+        </div>
+
+        <div class="player-subtabs" role="tablist">
+          <button type="button" class="p-subtab is-active" id="pTabBuzzer" role="tab" aria-selected="true">Buzzer</button>
+          <button type="button" class="p-subtab" id="pTabAsk" role="tab" aria-selected="false">Ask Luka</button>
+        </div>
+
+        <!-- Phone Buzzer Panel -->
+        <div class="player-buzzer-pane" id="playerBuzzerPane">
+          <div class="player-status-banner" id="playerStatusBanner">
+            <span class="p-banner-kicker" id="playerPhaseKicker">CONNECTED TO MISSION CONTROL</span>
+            <h2 id="playerPhaseTitle">Waiting for Luka to launch Round 1…</h2>
+            <p id="playerPhaseSub"></p>
+          </div>
+
+          <div class="player-kahoot-grid" id="playerAnswerGrid" hidden>
+            <button type="button" class="k-tile player shape-triangle" data-p-opt="0">
+              <span class="k-shape" aria-hidden="true">▲</span>
+              <span class="k-label" id="pOpt0">A</span>
+            </button>
+            <button type="button" class="k-tile player shape-diamond" data-p-opt="1">
+              <span class="k-shape" aria-hidden="true">◆</span>
+              <span class="k-label" id="pOpt1">B</span>
+            </button>
+            <button type="button" class="k-tile player shape-circle" data-p-opt="2">
+              <span class="k-shape" aria-hidden="true">●</span>
+              <span class="k-label" id="pOpt2">C</span>
+            </button>
+            <button type="button" class="k-tile player shape-square" data-p-opt="3">
+              <span class="k-shape" aria-hidden="true">■</span>
+              <span class="k-label" id="pOpt3">D</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Phone Ask Luka Panel -->
+        <div class="player-ask-pane" id="playerAskPane" hidden>
+          <div class="player-status-banner">
+            <span class="p-banner-kicker">ASK LUKA ANYTHING · OCEAN VS. ORBIT</span>
+            <h2>Send a Question to the Stage</h2>
+            <p>Your callsign will appear on Mission Control for Luka to answer live.</p>
+          </div>
+          <form class="player-ask-form" id="playerAskForm">
+            <textarea id="playerAskInput" rows="3" maxlength="220" placeholder="Ask Luka about space, deep oceans, robotics, or Steadwell VITA…"></textarea>
+            <button type="submit" class="mc-cta cyan full">Beam Question to Stage ↗</button>
+          </form>
+          <p class="ask-sent-msg" id="playerAskConfirm" hidden>Question beamed to Mission Control!</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./src/beat-the-bot.js"></script>
+</body>
+</html>

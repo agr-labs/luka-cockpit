@@ -4,7 +4,7 @@
 //   - Local Node server (src/sim-api.mjs)
 //   - Unit tests (tools/test-luka-sim.mjs)
 
-export const ALLOWED_APPS = new Set(['hub', 'luka-sim', 'cockpit', 'analytics']);
+export const ALLOWED_APPS = new Set(['hub', 'luka-sim', 'cockpit', 'analytics', 'beat-the-bot']);
 export const ALLOWED_ENVS = new Set(['pages', 'local']);
 export const ALLOWED_CATEGORIES = new Set([
   'nav',
@@ -14,6 +14,7 @@ export const ALLOWED_CATEGORIES = new Set([
   'safety',
   'trellis',
   'media',
+  'game',
   'perf',
   'error',
 ]);
@@ -24,6 +25,7 @@ export const ALLOWED_EVENTS = new Set([
   'sim_boot',
   'gesture_play',
   'speech_turn',
+  'voice_interrupt',
   'vision_session',
   'vision_guard',
   'safety_profile',
@@ -36,6 +38,7 @@ export const ALLOWED_EVENTS = new Set([
   'hand_calibrate',
   'recording_play',
   'reel_interaction',
+  'game_event',
   'camera_preset',
   'telemetry_connect',
   'runtime_error',

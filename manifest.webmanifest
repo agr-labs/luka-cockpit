@@ -1,0 +1,20 @@
+{
+  "name": "LUKA · Beat the Bot — Mission Control",
+  "short_name": "Beat the Bot",
+  "description": "Mission Earth & Beyond: challenge Luka v. A2U in Kahoot-meets-J.A.R.V.I.S. live Sea & Space trivia with 3D LukaSim and interruptible CoRa voice.",
+  "start_url": "./beat-the-bot.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#04070d",
+  "theme_color": "#04070d",
+  "categories": ["games", "education", "entertainment"],
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
